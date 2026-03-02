@@ -46,7 +46,7 @@ function createWindow() {
   }, 1000);
 }
 
-// Claude CLI 훅 자동 등록
+// Claude CLI 훅 자동 등록 (기존 훅을 보존하는 "예의 바른" 방식)
 function registerHooks() {
   const settingsPath = path.join(os.homedir(), '.claude', 'settings.json');
   const serverUrl = `http://localhost:${server.getServerPort()}/agent/status`;
@@ -55,7 +55,6 @@ function registerHooks() {
     if (!fs.existsSync(settingsPath)) return;
 
     const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-    // 최신 Claude CLI 훅 명칭 (type: "http" 사용)
     const hookEvents = [
       'SessionStart',
       'UserPromptSubmit',
@@ -63,7 +62,12 @@ function registerHooks() {
       'PostToolUse',
       'PostToolUseFailure',
       'Stop',
-      'Notification'
+      'Notification',
+      'SessionEnd',
+      'TaskCompleted',
+      'PermissionRequest',
+      'SubagentStart',
+      'SubagentStop'
     ];
 
     if (!settings.hooks) settings.hooks = {};
@@ -75,25 +79,36 @@ function registerHooks() {
       if (settings.hooks[h]) { delete settings.hooks[h]; updated = true; }
     });
 
-    // 최신 규격(type: "http")으로 훅 등록/업데이트
+    // 각 이벤트별로 우리 앱의 주소가 있는지 확인하고 없으면 추가
     hookEvents.forEach(name => {
-      const target = [{
-        matcher: "*",
-        hooks: [{
-          type: "http",
-          url: serverUrl
-        }]
-      }];
+      if (!settings.hooks[name]) {
+        settings.hooks[name] = [];
+      }
 
-      if (JSON.stringify(settings.hooks[name]) !== JSON.stringify(target)) {
-        settings.hooks[name] = target;
+      // 해당 이벤트의 훅 리스트에서 우리 서버 URL이 포함된 항목이 있는지 확인
+      const hasOurHook = settings.hooks[name].some(item =>
+        item.hooks && item.hooks.some(h => h.url === serverUrl)
+      );
+
+      if (!hasOurHook) {
+        // 우리 앱의 훅 정보 구성
+        const newHookEntry = {
+          matcher: "*",
+          hooks: [{
+            type: "http",
+            url: serverUrl
+          }]
+        };
+
+        // 기존 리스트에 추가 (덮어쓰지 않음)
+        settings.hooks[name].push(newHookEntry);
         updated = true;
       }
     });
 
     if (updated) {
       fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
-      console.log('최신 Claude CLI 훅 설정(HTTP 방식) 완료');
+      console.log('Claude CLI 훅 설정 완료 (기존 설정 보존)');
     }
   } catch (error) {
     console.error('훅 등록 실패:', error);

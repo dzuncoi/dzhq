@@ -22,20 +22,27 @@ const ANIM_SEQUENCES = {
   alert: { frames: [0, 31], fps: 4, loop: true }
 };
 
-// --- 상태별 맵핑 (최적화 및 통합) ---
+// --- 상태별 맵핑 (단순화된 라벨 적용) ---
 const stateConfig = {
   'SessionStart': { anim: 'waiting', class: 'state-waiting', label: 'Waiting...' },
   'UserPromptSubmit': { anim: 'working', class: 'state-working', label: 'Working...' },
   'PreToolUse': { anim: 'working', class: 'state-working', label: 'Working...' },
   'PostToolUse': { anim: 'working', class: 'state-working', label: 'Working...' },
+  'PostToolUseFailure': { anim: 'alert', class: 'state-alert', label: 'Error!' },
   'Stop': { anim: 'complete', class: 'state-complete', label: 'Done!' },
-  'Notification': { anim: 'alert', class: 'state-alert', label: 'Alert!' },
+  'Notification': { anim: 'alert', class: 'state-alert', label: 'Help!' },
+  'SessionEnd': { anim: 'waiting', class: 'state-waiting', label: 'Waiting...' },
+  'TaskCompleted': { anim: 'complete', class: 'state-complete', label: 'Done!' },
+  'PermissionRequest': { anim: 'alert', class: 'state-alert', label: 'Help!' },
+  'SubagentStart': { anim: 'working', class: 'state-working', label: 'Working...' },
+  'SubagentStop': { anim: 'working', class: 'state-working', label: 'Working...' },
   'Idle': { anim: 'waiting', class: 'state-waiting', label: 'Waiting...' },
   // 시스템 내부 호환용
   'Thinking': { anim: 'working', class: 'state-working', label: 'Working...' },
   'Working': { anim: 'working', class: 'state-working', label: 'Working...' },
   'Complete': { anim: 'complete', class: 'state-complete', label: 'Done!' },
-  'Alert': { anim: 'alert', class: 'state-alert', label: 'Alert!' }
+  'Alert': { anim: 'alert', class: 'state-alert', label: 'Help!' },
+  'Error': { anim: 'alert', class: 'state-alert', label: 'Error!' }
 };
 
 let currentAnimName = null;
@@ -90,7 +97,7 @@ function playAnimation(animName) {
 }
 
 /**
- * 상태 업데이트 (통합 인터페이스)
+ * 상태 업데이트 (상세 메시지 무시, 라벨만 사용)
  */
 function updateState(state, message) {
   const config = stateConfig[state] || stateConfig['Stop'];
@@ -101,10 +108,10 @@ function updateState(state, message) {
   // 애니메이션 재생
   playAnimation(config.anim);
 
-  // 말풍선 업데이트
-  if (speechBubble) speechBubble.textContent = message || config.label || state;
+  // 말풍선 업데이트 (전달받은 message 대신 무조건 config.label 사용)
+  if (speechBubble) speechBubble.textContent = config.label || 'Waiting...';
 
-  console.log(`[Renderer] State: ${state}, Anim: ${config.anim}`);
+  console.log(`[Renderer] State: ${state}, Label: ${config.label}`);
 }
 
 // IPC 수신

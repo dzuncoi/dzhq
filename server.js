@@ -72,14 +72,38 @@ async function createHttpServer() {
           const data = JSON.parse(body);
           const sessionId = data.session_id || data.sessionId;
           const state = data.hook_event_name || data.state;
-          const mappedState = state === 'PostToolUseFailure' ? 'Error' : state;
+          let mappedState = state;
           let message = data.last_assistant_message || data.prompt || data.tool_name || data.message || "";
+
+          // --- 고도화된 에러/상태 감지 로직 ---
+
+          // 1. 실제 시스템 에러 객체 감지 (429 에러 등 루트 레벨에 error 필드가 있는 경우)
+          const hasSystemError = data.error && (typeof data.error === 'object' || state === 'PostToolUseFailure');
+
+          if (hasSystemError) {
+            mappedState = 'Error';
+            message = typeof data.error === 'object' ? (data.error.message || 'API Error') : (data.error || 'Execution Failed');
+          }
+          // 2. 강제 중단 감지 (사용자 개입 필요 상황)
+          else if (data.is_interrupt === true) {
+            mappedState = 'Help';
+            message = 'Interrupted';
+          }
+          // 3. 일반적인 훅 이벤트 매핑
+          else {
+            // renderer.js에서 처리하므로 mappedState는 유지하되, 
+            // 텍스트 내의 'error' 단어 때문에 mappedState가 변하지 않도록 함
+            mappedState = state;
+          }
 
           // 메시지 길이 제한
           if (message.length > CONFIG.MAX_MESSAGE_LENGTH) message = message.substring(0, CONFIG.MAX_MESSAGE_LENGTH - 3) + "...";
 
           if (sessionId && mappedState) {
-            console.log(`상태 업데이트: [${mappedState}] ${message}`);
+            console.log(`[Server] Update: [${mappedState}] ${message}`);
+            // 디버깅을 위한 전체 데이터 로그
+            // console.log('Raw payload:', JSON.stringify(data, null, 2));
+
             agentStates.set(sessionId, { state: mappedState, message, timestamp: Date.now() });
 
             if (mainWindow && !mainWindow.isDestroyed()) {
