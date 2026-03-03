@@ -144,7 +144,7 @@ app.whenReady().then(() => {
     // Claude가 실행 중이면 로그 파일이 계속 갱신됨
     // 30분 이상 로그 변경이 없으면 비활성으로 간주 → 제거
     // =====================================================
-    const INACTIVE_MS = 30 * 60 * 1000; // 30분
+    const INACTIVE_MS = 1 * 60 * 1000; // 1분 (창 닫기 fallback)
 
     function checkInactiveAgents() {
       if (!agentManager || !logMonitor) return;

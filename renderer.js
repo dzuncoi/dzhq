@@ -225,11 +225,47 @@ function createAgentCard(agent) {
   card.appendChild(character);
   card.appendChild(dismissBtn);
 
-  // Click to focus terminal
+  // 찌르기(Poke) 상호작용 - 터미널 포커스 대신 재미있는 반응 추가
+  const pokeMessages = [
+    "앗, 깜짝이야!",
+    "열심히 일하는 중입니다!",
+    "코드 짜는 중... 💻",
+    "커피가 필요해요 ☕",
+    "이 부분 버그 아니죠?",
+    "간지러워요!",
+    "제 타수 엄청 빠르죠?",
+    "칭찬해주세요! 🌟"
+  ];
+
+  let pokeTimeout = null;
   card.onclick = () => {
-    if (window.electronAPI && agent.projectPath) {
-      window.electronAPI.focusTerminal(agent.projectPath);
-    }
+    // 이미 찔린 상태면 무시
+    if (pokeTimeout) return;
+
+    // 원래 상태 백업
+    const originalText = bubble.textContent;
+    const originalBorder = bubble.style.borderColor;
+
+    // 찌르기 반응
+    const randomMsg = pokeMessages[Math.floor(Math.random() * pokeMessages.length)];
+    bubble.textContent = randomMsg;
+    bubble.style.borderColor = '#ff4081'; // 핑크색 테두리로 깜짝 놀람 표현
+
+    // 2초 후 원래 상태로 복구
+    pokeTimeout = setTimeout(() => {
+      // 그 사이 에이전트 상태가 업데이트 되었을 수 있으므로 강제 복구 대신
+      // UI 업데이트 함수가 자연스럽게 덮어쓰도록 유도
+      bubble.style.borderColor = '';
+      pokeTimeout = null;
+      // 상태 재반영을 위해 DOM 속성 이용하여 복원
+      const currentAgent = document.querySelector(`.agent-card[data-agent-id="${agent.id}"]`);
+      if (currentAgent) {
+        const stateTag = currentAgent.dataset.state;
+        const stateConf = stateConfig[Object.keys(stateConfig).find(k => stateConfig[k].anim === stateTag)] || stateConfig['Working'];
+        // renderer.js의 updateAgentUI가 다음 업데이트때 알아서 고치겠지만, 혹시나 해서 일단 원래 라벨로.
+        bubble.textContent = originalText;
+      }
+    }, 2000);
   };
 
   return card;

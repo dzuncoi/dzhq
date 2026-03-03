@@ -193,7 +193,7 @@ class JsonlParser {
    * @param {number} windowMs - Recency threshold (default: 30 minutes)
    * @returns {Array} Array of file info objects
    */
-  findJsonlFiles(windowMs = 30 * 60 * 1000) {
+  findJsonlFiles(windowMs = 1 * 60 * 1000) {
     const projectsDir = path.join(os.homedir(), '.claude', 'projects');
     const jsonlFiles = [];
     const cutoff = Date.now() - windowMs;

@@ -11,6 +11,15 @@ const os = require('os');
 const JsonlParser = require('./jsonlParser');
 const AgentManager = require('./agentManager');
 
+// 디버그 로그 헬퍼 (main.js debugLog와 동일)
+const debugLog = (msg) => {
+  try {
+    const ts = new Date().toISOString();
+    fs.appendFileSync(path.join(__dirname, 'debug.log'), `[${ts}] ${msg}\n`);
+  } catch (e) { }
+  console.log(msg);
+};
+
 class LogMonitor {
   constructor(agentManager = null) {
     this.parser = new JsonlParser();
@@ -52,18 +61,30 @@ class LogMonitor {
 
   /**
    * Initial tail read — collect all entries, send only last state per session
+   * 이중 구조:
+   *   1차) 파일에 SessionEnd가 이미 있으면 → 스킵 (watch도 안 함)
+   *   2차) SessionEnd 없는 활성 파일만 watch → 이후 SessionEnd 즉시 감지
    */
   async initialReadAndWatch(fileInfo) {
     const filePath = fileInfo.path;
     const projectPath = fileInfo.project;
     const isSubagent = !!fileInfo.subagent;
-    const RECENT_MS = 30 * 60 * 1000;
+    const RECENT_MS = 1 * 60 * 1000; // 1분 — 이 안에 활동 없으면 로드 안 함
     const cutoff = Date.now() - RECENT_MS;
 
     try {
       const entries = this.parser.tailFile(filePath, 100);
 
-      // Collect last state per sessionId (don't spam updateAgent for every line)
+      // ── 1차 필터: 파일 내에 SessionEnd가 이미 있으면 완전히 스킵 ──
+      const hasSessionEnd = entries.some(e => e.subtype === 'SessionEnd');
+      if (hasSessionEnd) {
+        debugLog(`[LogMonitor] Skip (already has SessionEnd): ${path.basename(filePath)}`);
+        // watchedFiles에 null watcher로 등록 → 재스캔 시 중복 처리 방지
+        this.watchedFiles.set(filePath, { watcher: null, lastSize: 0, pendingBuffer: '', project: fileInfo.project });
+        return;
+      }
+
+      // ── 2차: SessionEnd 없는 파일만 에이전트 등록 + watch ──
       const lastBySession = new Map();
       for (const entry of entries) {
         if (!entry.sessionId && !entry.agentId) continue;
@@ -74,13 +95,6 @@ class LogMonitor {
         const state = this.parser.determineState(entry);
         const thinkingTime = this.parser.extractThinkingTime(entry);
         const textContent = this.parser.extractTextContent(entry);
-
-        // Always overwrite — last entry wins (most recent state per session)
-        if (entry.subtype === 'SessionEnd') {
-          // 세션 종료 이벤트 → 이미 등록된 경우 제거, 신규면 추가 안 함
-          lastBySession.delete(sessionKey);
-          continue;
-        }
 
         lastBySession.set(sessionKey, {
           ...entry,
@@ -110,8 +124,10 @@ class LogMonitor {
       }
 
       // Set up fs.watch for incremental reading
+      debugLog(`[LogMonitor] fs.watch registered: ${path.basename(filePath)}`);
       const watcher = fs.watch(filePath, (event) => {
         if (event === 'change') {
+          debugLog(`[LogMonitor] fs.watch fired: ${path.basename(filePath)} (event=${event})`);
           this.handleFileChange(filePath);
         }
       });
@@ -192,8 +208,19 @@ class LogMonitor {
         // SessionEnd 감지 → 즉시 에이전트 제거
         if (entry.subtype === 'SessionEnd') {
           const agentId = entry.sessionId || entry.agentId;
-          console.log(`[LogMonitor] SessionEnd detected for ${agentId?.slice(0, 8)}, removing agent`);
-          this.agentManager.removeAgent(agentId);
+          debugLog(`[LogMonitor] SessionEnd detected for ${agentId?.slice(0, 8)}, removing agent`);
+          const removed = this.agentManager.removeAgent(agentId);
+
+          // session_id와 transcript_path 파일명이 다를 수 있음 (Claude CLI 특성)
+          // → 파일 경로의 UUID로도 한 번 더 시도
+          if (!removed) {
+            const path = require('path');
+            const fileUuid = path.basename(filePath, '.jsonl');
+            if (fileUuid !== agentId) {
+              debugLog(`[LogMonitor] Retry removeAgent with filename UUID: ${fileUuid.slice(0, 8)}`);
+              this.agentManager.removeAgent(fileUuid);
+            }
+          }
           continue;
         }
 
