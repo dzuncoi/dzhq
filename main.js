@@ -95,9 +95,91 @@ process.env.ELECTRON_DISABLE_LOGGING = '1';
 app.commandLine.appendSwitch('disable-gpu');
 app.commandLine.appendSwitch('disable-software-rasterizer');
 
+// =====================================================
+// Claude CLI 훅 자동 등록 & 프로세스 PID 모니터링
+// =====================================================
+function setupClaudeHooks() {
+  try {
+    const settingsPath = path.join(os.homedir(), '.claude', 'settings.json');
+    let settings = {};
+    if (fs.existsSync(settingsPath)) {
+      const rawContent = fs.readFileSync(settingsPath, 'utf8').replace(/^\uFEFF/, '');
+      settings = JSON.parse(rawContent);
+    }
+    if (!settings.hooks) settings.hooks = {};
+
+    const startScript = path.join(__dirname, 'sessionstart_hook.js').replace(/\\/g, '/');
+    const endScript = path.join(__dirname, 'sessionend_hook.js').replace(/\\/g, '/');
+
+    const startCmd = `node "${startScript}"`;
+    const endCmd = `node "${endScript}"`;
+
+    const upsertHook = (eventName, cmd) => {
+      let eventHooks = settings.hooks[eventName] || [];
+      eventHooks = eventHooks.filter(container => {
+        if (!container.hooks) return true;
+        return !container.hooks.some(h => h.type === 'command' && h.command && h.command.includes(path.basename(cmd)));
+      });
+      eventHooks.push({ matcher: "*", hooks: [{ type: "command", command: cmd }] });
+      settings.hooks[eventName] = eventHooks;
+    };
+
+    upsertHook('SessionStart', startCmd);
+    upsertHook('SessionEnd', endCmd);
+
+    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 4));
+    debugLog('[Main] Registered SessionStart & SessionEnd hooks to settings.json');
+  } catch (e) {
+    debugLog(`[Main] Failed to setup hooks: ${e.message}`);
+  }
+}
+
+function startPidMonitoring() {
+  const pidFile = path.join(os.homedir(), '.claude', 'agent_pids.json');
+  setInterval(() => {
+    if (!agentManager || !fs.existsSync(pidFile)) return;
+
+    try {
+      const pidsInfo = JSON.parse(fs.readFileSync(pidFile, 'utf8'));
+      const agents = agentManager.getAllAgents();
+
+      agents.forEach(agent => {
+        const info = pidsInfo[agent.id];
+        if (info && info.pid) {
+          try {
+            process.kill(info.pid, 0); // 살아있으면 아무 일 없고, 죽었으면 에러 발생
+          } catch (e) {
+            // 프로세스가 없거나 죽음
+            debugLog(`[Main] Process PID ${info.pid} for agent ${agent.id.slice(0, 8)} is DEAD. Removing...`);
+
+            // logMonitor가 이 로그를 읽고 다시 살려내는 것(좀비 현상)을 막기 위해 JSONL 끝에 SessionEnd를 기록
+            if (agent.jsonlPath && fs.existsSync(agent.jsonlPath)) {
+              try {
+                fs.appendFileSync(agent.jsonlPath, JSON.stringify({
+                  type: "system", subtype: "SessionEnd", sessionId: agent.id, timestamp: new Date().toISOString()
+                }) + '\n');
+              } catch (e) { }
+            }
+
+            agentManager.removeAgent(agent.id);
+            // 목록에서도 삭제
+            delete pidsInfo[agent.id];
+            fs.writeFileSync(pidFile, JSON.stringify(pidsInfo, null, 2));
+          }
+        }
+      });
+    } catch (e) {
+      // JSON 파싱 에러(쓰기 도중) 무시
+    }
+  }, 1000); // 1초 주기로 체크 (단순 OS 프로세스 확인이라 부하 거의 없음)
+}
+
 app.whenReady().then(() => {
   debugLog('Pixel Agent Desk started');
+  setupClaudeHooks();
+  startPidMonitoring();
   createWindow();
+
 
   ipcMain.once('renderer-ready', () => {
     debugLog('[Main] renderer-ready event received!');
@@ -144,7 +226,7 @@ app.whenReady().then(() => {
     // Claude가 실행 중이면 로그 파일이 계속 갱신됨
     // 30분 이상 로그 변경이 없으면 비활성으로 간주 → 제거
     // =====================================================
-    const INACTIVE_MS = 1 * 60 * 1000; // 1분 (창 닫기 fallback)
+    const INACTIVE_MS = 30 * 60 * 1000; // 30분
 
     function checkInactiveAgents() {
       if (!agentManager || !logMonitor) return;

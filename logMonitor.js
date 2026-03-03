@@ -69,7 +69,7 @@ class LogMonitor {
     const filePath = fileInfo.path;
     const projectPath = fileInfo.project;
     const isSubagent = !!fileInfo.subagent;
-    const RECENT_MS = 1 * 60 * 1000; // 1분 — 이 안에 활동 없으면 로드 안 함
+    const RECENT_MS = 30 * 60 * 1000;
     const cutoff = Date.now() - RECENT_MS;
 
     try {
