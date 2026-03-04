@@ -404,8 +404,15 @@ function recoverExistingSessions() {
         // 기존 세션은 초기화 완료 → PreToolUse 첫 번째 무시 로직 우회
         firstPreToolUseDone.set(sessionId, true);
 
-        // firstSeen을 30초 과거로 설정해 Grace 기간 건너뜀
-        const recoveredAgent = agentManager.updateAgent({ sessionId, projectPath: cwd, displayName, state: 'Waiting', jsonlPath: filePath }, 'recover');
+        const recoveredAgent = agentManager.updateAgent({
+          sessionId,
+          projectPath: cwd,
+          displayName,
+          state: 'Waiting',
+          jsonlPath: filePath,
+          isTeammate: false, // 기본적으로 메인 세션으로 간주하되, 훅이 오면 전환됨
+          isSubagent: false
+        }, 'recover');
         if (recoveredAgent) recoveredAgent.firstSeen = Date.now() - 30000;
 
         debugLog(`[Recover] Restored: ${sessionId.slice(0, 8)} (${displayName}) pid=${pid}`);
@@ -566,10 +573,26 @@ app.whenReady().then(() => {
       }
     });
 
-    // 준비 전에 도착했던 SessionStart 처리
+    agentManager.on('agents-cleaned', (data) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('agents-cleaned', data);
+        resizeWindowForAgents(agentManager.getAgentCount());
+      }
+    });
+
+    // 준비 전에 도착했던 세션 및 복구된 데이터 전송
+    const allAgents = agentManager.getAllAgents();
+    if (allAgents.length > 0) {
+      debugLog(`[Main] Sending ${allAgents.length} agents to newly ready renderer`);
+      allAgents.forEach(agent => {
+        mainWindow.webContents.send('agent-added', agent);
+      });
+      resizeWindowForAgents(allAgents.length);
+    }
+
     while (pendingSessionStarts.length > 0) {
-      const { sessionId, cwd } = pendingSessionStarts.shift();
-      handleSessionStart(sessionId, cwd);
+      const { sessionId, cwd, isTeammate } = pendingSessionStarts.shift();
+      handleSessionStart(sessionId, cwd, 0, isTeammate);
     }
   });
 
