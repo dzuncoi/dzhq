@@ -203,6 +203,12 @@ function startHookServer() {
         const sessionId = data.session_id || data.sessionId;
         if (!sessionId) return;
 
+        // 훅에 담긴 PID(claude 프로세스)로 sessionPids 매핑을 자동 힐링 및 보정
+        if (data._pid && (!sessionPids.has(sessionId) || sessionPids.get(sessionId) !== data._pid)) {
+          sessionPids.set(sessionId, data._pid);
+          debugLog(`[Hook] PID recorded dynamically: ${sessionId.slice(0, 8)} -> pid=${data._pid}`);
+        }
+
         debugLog(`[Hook] ${event} session=${sessionId.slice(0, 8)}`);
 
         switch (event) {
@@ -298,44 +304,64 @@ function startHookServer() {
   });
 }
 // =====================================================
-// 앱 재시작 시 기존 활성 세션 복구 (1회 실행)
-// ~/.claude/projects/ 하위 최근 30분 내 JSONL 스캔
+// 앱 재시작 시 기존 활성 세션 복구 및 PID 매칭 (1회 실행)
 // =====================================================
 function recoverExistingSessions() {
   if (!agentManager) return;
-  const projectsDir = path.join(os.homedir(), '.claude', 'projects');
-  if (!fs.existsSync(projectsDir)) return;
+  const { execFile } = require('child_process');
 
-  const RECENT_MS = 30 * 60 * 1000;
-  const cutoff = Date.now() - RECENT_MS;
-  let recovered = 0;
+  // 1. 현재 살아있는 claude 프로세스 PID 목록 조회
+  const psCmd = `Get-CimInstance Win32_Process -Filter "Name='node.exe'" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like '*claude*cli.js*' } | Select-Object -ExpandProperty ProcessId`;
 
-  try {
-    for (const projectEntry of fs.readdirSync(projectsDir, { withFileTypes: true })) {
-      if (!projectEntry.isDirectory()) continue;
-      const projectPath = path.join(projectsDir, projectEntry.name);
+  execFile('powershell.exe', ['-NoProfile', '-Command', psCmd], { timeout: 8000 }, (err, stdout) => {
+    const livePids = [];
+    if (!err && stdout) {
+      livePids.push(...stdout.trim().split('\n').map(p => parseInt(p.trim(), 10)).filter(p => !isNaN(p) && p > 0));
+    }
 
-      for (const file of fs.readdirSync(projectPath)) {
-        if (!file.endsWith('.jsonl')) continue;
-        const filePath = path.join(projectPath, file);
+    if (livePids.length === 0) {
+      debugLog('[Recover] No running Claude processes found.');
+      return;
+    }
+
+    debugLog(`[Recover] Found ${livePids.length} Claude process(es). Scanning JSONL for matching sessions...`);
+
+    // 2. ~/.claude/projects/ 스캔 (30분 조건 제외, 최신 파일부터 위에서 컷)
+    const projectsDir = require('path').join(require('os').homedir(), '.claude', 'projects');
+    if (!require('fs').existsSync(projectsDir)) return;
+
+    const candidates = [];
+    try {
+      for (const projectEntry of require('fs').readdirSync(projectsDir, { withFileTypes: true })) {
+        if (!projectEntry.isDirectory()) continue;
+        const projectPath = require('path').join(projectsDir, projectEntry.name);
+
+        for (const file of require('fs').readdirSync(projectPath)) {
+          if (!file.endsWith('.jsonl')) continue;
+          const filePath = require('path').join(projectPath, file);
+          try {
+            const stat = require('fs').statSync(filePath);
+            candidates.push({ filePath, mtime: stat.mtimeMs, size: stat.size, projectPath });
+          } catch (e) { }
+        }
+      }
+
+      // 최신 수정 시간(mtime) 순으로 정렬
+      candidates.sort((a, b) => b.mtime - a.mtime);
+
+      const recoveredSessions = [];
+      for (const candidate of candidates) {
+        if (recoveredSessions.length >= livePids.length) break; // 살아있는 프로세스 수만큼만 복구
 
         try {
-          const stat = fs.statSync(filePath);
-          if (stat.mtimeMs < cutoff) continue; // 30분 이상 지난 파일 제외
-
-          // 파일 끝 4KB만 읽어 최근 라인 확인
-          const fileSize = stat.size;
-          const readSize = Math.min(fileSize, 4096);
+          const readSize = Math.min(candidate.size, 8192); // 파일 끝 8KB
           const buf = Buffer.alloc(readSize);
-          const fd = fs.openSync(filePath, 'r');
-          fs.readSync(fd, buf, 0, readSize, fileSize - readSize);
-          fs.closeSync(fd);
+          const fd = require('fs').openSync(candidate.filePath, 'r');
+          require('fs').readSync(fd, buf, 0, readSize, candidate.size - readSize);
+          require('fs').closeSync(fd);
 
           const lines = buf.toString('utf-8').split('\n').filter(l => l.trim());
-
-          let sessionId = null;
-          let cwd = '';
-          let hasSessionEnd = false;
+          let sessionId = null, cwd = candidate.projectPath, hasSessionEnd = false;
 
           for (const line of lines) {
             try {
@@ -346,21 +372,35 @@ function recoverExistingSessions() {
             } catch (e) { }
           }
 
-          if (!sessionId || hasSessionEnd) continue;
-          if (agentManager.getAgent(sessionId)) continue; // 이미 등록됨
-
-          // 등록
-          const displayName = cwd ? path.basename(cwd) : path.basename(projectPath);
-          agentManager.updateAgent({ sessionId, projectPath: cwd, displayName, state: 'Waiting', jsonlPath: filePath }, 'recover');
-          debugLog(`[Recover] Restored: ${sessionId.slice(0, 8)} (${displayName})`);
-          recovered++;
+          if (sessionId && !hasSessionEnd && !agentManager.getAgent(sessionId)) {
+            recoveredSessions.push({ sessionId, cwd, filePath: candidate.filePath });
+          }
         } catch (e) { }
       }
+
+      // 3. 복구된 세션 등록
+      for (let i = 0; i < recoveredSessions.length; i++) {
+        const { sessionId, cwd, filePath } = recoveredSessions[i];
+        const pid = livePids[i];
+
+        const displayName = cwd ? require('path').basename(cwd) : 'Agent';
+        sessionPids.set(sessionId, pid);
+
+        // 중요: 기존 세션은 초기화가 끝났으므로 UserPromptSubmit 전 1회 무시 로직을 우회하도록 설정
+        firstPreToolUseDone.set(sessionId, true);
+
+        // recovered된 에이전트는 firstSeen을 의도적으로 과거로 밀어 Liveness Checker 유예기간을 없앰
+        const recoveredAgent = agentManager.updateAgent({ sessionId, projectPath: cwd, displayName, state: 'Waiting', jsonlPath: filePath }, 'recover');
+        if (recoveredAgent) recoveredAgent.firstSeen = Date.now() - 30000;
+
+        debugLog(`[Recover] Restored: ${sessionId.slice(0, 8)} (${displayName}) with PID=${pid}`);
+      }
+      debugLog(`[Recover] Done — ${recoveredSessions.length} session(s) mapped to PIDs`);
+
+    } catch (e) {
+      debugLog(`[Recover] Error: ${e.message}`);
     }
-    debugLog(`[Recover] Done — ${recovered} session(s) restored`);
-  } catch (e) {
-    debugLog(`[Recover] Error: ${e.message}`);
-  }
+  });
 }
 
 // =====================================================
@@ -369,9 +409,9 @@ function recoverExistingSessions() {
 const sessionPids = new Map(); // sessionId → pid
 
 function startLivenessChecker() {
-  const INTERVAL = 5000;   // 5초마다 확인
-  const GRACE_MS = 15000;  // 등록 훅 15초는 제외
-  const MAX_MISS = 3;      // 3회 연속 실패 → DEAD
+  const INTERVAL = 3000;   // 3초마다 확인 (빠른 감지)
+  const GRACE_MS = 10000;  // 등록 직후 10초는 스킵 (클로드가 PID 발급받을 여유)
+  const MAX_MISS = 2;      // 2회 연속 실패 → DEAD
   const missCount = new Map();
 
   setInterval(() => {
