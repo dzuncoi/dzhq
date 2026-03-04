@@ -231,7 +231,7 @@ function createAgentCard(agent) {
   const projectTag = document.createElement('span');
   projectTag.className = 'project-tag';
   projectTag.textContent = agent.projectPath ? agent.projectPath.split(/[\\/]/).pop() : 'Default';
-  projectTag.title = agent.projectPath; // 전체 경로는 툴팁으로
+  projectTag.title = agent.projectPath || ''; // 툴팁으로 전체 경로 표시 (null 안전)
 
   const typeTag = document.createElement('span');
   typeTag.className = `type-tag ${typeClass}`;
@@ -295,7 +295,9 @@ function addAgent(agent) {
 
   // 전역 데이터 캐시 업데이트 (정렬용)
   if (!window.lastAgents) window.lastAgents = [];
-  window.lastAgents.push(agent);
+  if (!window.lastAgents.some(a => a.id === agent.id)) {
+    window.lastAgents.push(agent);
+  }
 
   // Set initial state
   updateAgentState(agent.id, card, agent.state || 'Waiting');
@@ -361,13 +363,13 @@ function drawFrameOn(el, frameIndex) {
 function updateGridLayout() {
   const cards = Array.from(agentGrid.querySelectorAll('.agent-card'));
   if (cards.length === 0) {
-    agentGrid.classList.remove('multi-mode');
+    agentGrid.classList.remove('has-multiple');
     if (idleContainer) idleContainer.style.display = 'flex';
     return;
   }
 
   if (idleContainer) idleContainer.style.display = 'none';
-  agentGrid.classList.add('multi-mode');
+  agentGrid.classList.add('has-multiple');
 
   // 같은 프로젝트끼리, 그 안에서 Main -> Sub -> Team 순으로 정렬
   cards.sort((a, b) => {
@@ -414,7 +416,7 @@ async function init() {
   // Load existing agents
   try {
     const agents = await window.electronAPI.getAllAgents();
-    window.lastAgents = agents; // 정렬용 전역 보관
+    window.lastAgents = [...agents]; // 정렬용 전역 보관
     console.log(`[Renderer] Loaded ${agents.length} existing agents`);
     for (const agent of agents) {
       addAgent(agent);
