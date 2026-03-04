@@ -158,6 +158,27 @@ function setupClaudeHooks() {
 const pendingSessionStarts = [];
 // 세션별 첫 PreToolUse 여부 추적 (초기화 탐색 무시용)
 const firstPreToolUseDone = new Map(); // sessionId → boolean
+// PostToolUse 이후 Done 전환용 타이머 (TaskCompleted 훅이 안 오는 경우 대비)
+const postToolIdleTimers = new Map(); // sessionId → timer
+const POST_TOOL_IDLE_MS = 2500; // PostToolUse 후 2.5초 내 추가 훅 없으면 Done
+
+function scheduleIdleDone(sessionId) {
+  // 이미 예약된 타이머 취소
+  const prev = postToolIdleTimers.get(sessionId);
+  if (prev) clearTimeout(prev);
+
+  const timer = setTimeout(() => {
+    postToolIdleTimers.delete(sessionId);
+    if (!agentManager) return;
+    const agent = agentManager.getAgent(sessionId);
+    if (agent && (agent.state === 'Working' || agent.state === 'Thinking')) {
+      debugLog(`[Hook] Idle timeout → Done: ${sessionId.slice(0, 8)}`);
+      agentManager.updateAgent({ ...agent, sessionId, state: 'Done' }, 'hook');
+    }
+  }, POST_TOOL_IDLE_MS);
+
+  postToolIdleTimers.set(sessionId, timer);
+}
 
 function startHookServer() {
   const http = require('http');
@@ -190,13 +211,17 @@ function startHookServer() {
             handleSessionEnd(sessionId);
             break;
 
-          case 'PreToolUse':
-          case 'PostToolUse': {
-            // 첫 PreToolUse는 Claude 세션 초기화(cwd 탐색 등)이므로 무시
-            // 두 번째부터는 사용자 요청에 의한 실제 도구 사용 → Working
+          case 'PreToolUse': {
+            // \uccab PreToolUse\ub294 Claude \uc138\uc158 \ucd08\uae30\ud654\uc774\ubbc0\ub85c \ubb34\uc2dc
+            // \ub450 \ubc88\uc9f8\ubd80\ud130 \uc0ac\uc6a9\uc790 \uc694\uccad \uc2e4\uc81c \ub3c4\uad6c \uc0ac\uc6a9 \u2192 Working
+            // idle \ud0c0\uc774\uba38 \ucde8\uc18c (\ub3c4\uad6c\uac00 \ub610 \uc2dc\uc791\ub410\uc73c\ub2c8 Done \ucde8\uc18c)
+            const prev = postToolIdleTimers.get(sessionId);
+            if (prev) clearTimeout(prev);
+            postToolIdleTimers.delete(sessionId);
+
             if (!firstPreToolUseDone.has(sessionId)) {
               firstPreToolUseDone.set(sessionId, true);
-              debugLog(`[Hook] ${event} ignored (first tool use = session init)`);
+              debugLog(`[Hook] PreToolUse ignored (first = session init)`);
             } else if (agentManager) {
               const agent = agentManager.getAgent(sessionId);
               if (agent) agentManager.updateAgent({ ...agent, sessionId, state: 'Working' }, 'hook');
@@ -204,14 +229,26 @@ function startHookServer() {
             break;
           }
 
+          case 'PostToolUse': {
+            // \ub3c4\uad6c \uc644\ub8cc: Working \uc720\uc9c0, \uc774\ud6c4 2.5\ucd08 \ud6c5 \uc5c6\uc73c\uba74 \uc790\ub3d9 Done
+            if (agentManager && firstPreToolUseDone.has(sessionId)) {
+              const agent = agentManager.getAgent(sessionId);
+              if (agent) agentManager.updateAgent({ ...agent, sessionId, state: 'Working' }, 'hook');
+            }
+            scheduleIdleDone(sessionId);
+            break;
+          }
+
           case 'TaskCompleted':
-            // AI 응답 완료 → Done, 다음 사용자 메시지를 위해 첫 PreToolUse 플래그 리셋
+            // TaskCompleted\uac00 \uc624\uba74 \uc989\uc2dc Done (\ud0c0\uc774\uba38 \ucde8\uc18c)
+            { const t = postToolIdleTimers.get(sessionId); if (t) clearTimeout(t); postToolIdleTimers.delete(sessionId); }
             firstPreToolUseDone.delete(sessionId);
             if (agentManager) {
               const agent = agentManager.getAgent(sessionId);
               if (agent) agentManager.updateAgent({ ...agent, sessionId, state: 'Done' }, 'hook');
             }
             break;
+
 
           case 'PermissionRequest':
             // 권한 요청 → Help (사용자 입력 필요)
