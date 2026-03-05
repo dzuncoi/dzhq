@@ -1,0 +1,324 @@
+/**
+ * P0-4: Test Coverage - errorHandler.js Tests
+ * 에러 핸들러 핵심 기능 테스트
+ */
+
+const errorHandler = require('../errorHandler');
+const fs = require('fs');
+const path = require('path');
+
+// Mock fs module
+jest.mock('fs');
+jest.mock('electron', () => ({
+  app: {
+    getPath: jest.fn(() => '/tmp/userdata')
+  }
+}));
+
+describe('ErrorHandler', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    fs.existsSync.mockReturnValue(true);
+    fs.readdirSync.mockReturnValue([]);
+    fs.statSync.mockReturnValue({ size: 1024, mtime: new Date() });
+    fs.appendFileSync.mockImplementation(() => {});
+  });
+
+  describe('capture', () => {
+    beforeEach(() => {
+      errorHandler.resetErrorCount();
+      errorHandler.deduplicationSet.clear();
+    });
+
+    test('normalizes error object', () => {
+      const error = new Error('Test error');
+      const context = { code: 'E001', category: 'FILE_IO' };
+
+      const result = errorHandler.capture(error, context);
+
+      expect(result).toHaveProperty('id');
+      expect(result).toHaveProperty('timestamp');
+      expect(result.code).toBe('E001');
+      expect(result.message).toBe('Test error');
+      expect(result.userMessage).toBeDefined();
+      expect(result.severity).toBe('error');
+    });
+
+    test('generates unique ID for each error', () => {
+      const error1 = errorHandler.capture(new Error('Error 1'), { code: 'E001' });
+      const error2 = errorHandler.capture(new Error('Error 2'), { code: 'E002' });
+
+      expect(error1.id).not.toBe(error2.id);
+      expect(error1.id).toMatch(/^err_/);
+    });
+
+    test('deduplicates identical errors within 5 seconds', () => {
+      const error = new Error('Duplicate error');
+      const context = { code: 'E001' };
+
+      const result1 = errorHandler.capture(error, context);
+      const result2 = errorHandler.capture(error, context);
+
+      expect(result1.id).toBe(result2.id);
+    });
+
+    test('logs error to file', () => {
+      const error = new Error('Log test');
+      errorHandler.capture(error, { code: 'E001' });
+
+      expect(fs.appendFileSync).toHaveBeenCalled();
+    });
+
+    test('increments error count', () => {
+      const initialCount = errorHandler.errorCount;
+
+      errorHandler.capture(new Error('Error 1'), { code: 'E001' });
+      errorHandler.capture(new Error('Error 2'), { code: 'E002' });
+
+      expect(errorHandler.errorCount).toBe(initialCount + 2);
+    });
+  });
+
+  describe('normalize', () => {
+    test('handles error with code', () => {
+      const error = new Error('Test error');
+      const context = { code: 'E001' };
+
+      const result = errorHandler.normalize(error, context);
+
+      expect(result.code).toBe('E001');
+      expect(result.userMessage).toBeDefined();
+      expect(result.explanation).toBeDefined();
+    });
+
+    test('handles error without code', () => {
+      const error = new Error('Test error');
+      const context = { code: undefined };
+
+      const result = errorHandler.normalize(error, context);
+
+      expect(result.code).toBe('E000');
+      expect(result.userMessage).toBe('작업을 완료할 수 없어요');
+    });
+
+    test('includes stack trace', () => {
+      const error = new Error('Test error');
+      const context = { code: 'E001' };
+
+      const result = errorHandler.normalize(error, context);
+
+      expect(result.stack).toBeDefined();
+      expect(result.stack).toContain('Test error');
+    });
+
+    test('maps severity correctly', () => {
+      const error = new Error('Test error');
+
+      const fatalResult = errorHandler.normalize(error, { severity: 'fatal' });
+      expect(fatalResult.severity).toBe('fatal');
+
+      const warningResult = errorHandler.normalize(error, { severity: 'warning' });
+      expect(warningResult.severity).toBe('warning');
+    });
+  });
+
+  describe('generateId', () => {
+    test('generates ID with prefix', () => {
+      const error = new Error('Test');
+      const result = errorHandler.capture(error, { code: 'E001' });
+
+      expect(result.id).toMatch(/^err_\d+_[a-z0-9]+$/);
+    });
+
+    test('generates unique IDs', () => {
+      const error = new Error('Test');
+      const result1 = errorHandler.capture(error, { code: 'E001' });
+      const result2 = errorHandler.capture(error, { code: 'E002' });
+
+      expect(result1.id).not.toBe(result2.id);
+    });
+  });
+
+  describe('logToFile', () => {
+    test('writes JSON log entry', () => {
+      const errorContext = {
+        id: 'err_test',
+        timestamp: '2026-03-05T00:00:00.000Z',
+        code: 'E001',
+        message: 'Test error'
+      };
+
+      errorHandler.logToFile(errorContext);
+
+      expect(fs.appendFileSync).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.stringContaining('"message":"Test error"'),
+        'utf8'
+      );
+    });
+
+    test('handles write errors gracefully', () => {
+      fs.appendFileSync.mockImplementation(() => {
+        throw new Error('Write failed');
+      });
+
+      const error = new Error('Test');
+      expect(() => errorHandler.capture(error, { code: 'E001' }))
+        .not.toThrow();
+    });
+  });
+
+  describe('readRecentLogs', () => {
+    test('returns recent logs from file', () => {
+      fs.existsSync.mockReturnValue(true);
+      fs.readFileSync.mockReturnValue(
+        JSON.stringify({ timestamp: '2026-03-05T00:00:00.000Z', message: 'Test 1' }) + '\n' +
+        JSON.stringify({ timestamp: '2026-03-05T00:01:00.000Z', message: 'Test 2' })
+      );
+
+      const logs = errorHandler.readRecentLogs(100);
+
+      expect(logs).toContain('Test 1');
+      expect(logs).toContain('Test 2');
+    });
+
+    test('returns message when log file missing', () => {
+      fs.existsSync.mockReturnValue(false);
+
+      const logs = errorHandler.readRecentLogs();
+
+      expect(logs).toBe('로그 파일이 없어요');
+    });
+
+    test('handles read errors gracefully', () => {
+      fs.existsSync.mockReturnValue(true);
+      fs.readFileSync.mockImplementation(() => {
+        throw new Error('Read failed');
+      });
+
+      const logs = errorHandler.readRecentLogs();
+
+      expect(logs).toContain('로그 읽기 실패');
+    });
+  });
+
+  describe('resetErrorCount', () => {
+    test('resets error counter to zero', () => {
+      errorHandler.capture(new Error('Error 1'), { code: 'E001' });
+      expect(errorHandler.errorCount).toBeGreaterThan(0);
+
+      errorHandler.resetErrorCount();
+      expect(errorHandler.errorCount).toBe(0);
+    });
+  });
+
+  describe('getLogFilePath', () => {
+    test('returns current log file path', () => {
+      const path = errorHandler.getLogFilePath();
+      expect(path).toBeDefined();
+      expect(path).toContain('error-');
+      expect(path).toContain('.log');
+    });
+  });
+
+  describe('setMainWindow', () => {
+    test('sets main window for IPC', () => {
+      const mockWindow = {
+        webContents: {
+          send: jest.fn()
+        }
+      };
+
+      errorHandler.setMainWindow(mockWindow);
+      expect(errorHandler.mainWindow).toBe(mockWindow);
+    });
+  });
+
+  describe('sendToRenderer', () => {
+    test('sends error event to renderer', () => {
+      const mockWindow = {
+        webContents: {
+          send: jest.fn()
+        },
+        isDestroyed: () => false
+      };
+
+      errorHandler.setMainWindow(mockWindow);
+
+      const errorContext = {
+        id: 'err_test',
+        code: 'E001',
+        message: 'Test error'
+      };
+
+      errorHandler.sendToRenderer(errorContext);
+
+      expect(mockWindow.webContents.send).toHaveBeenCalledWith(
+        'error-occurred',
+        errorContext
+      );
+    });
+
+    test('does not send when window destroyed', () => {
+      const mockWindow = {
+        isDestroyed: () => true
+      };
+
+      errorHandler.setMainWindow(mockWindow);
+
+      const errorContext = { id: 'err_test', code: 'E001' };
+
+      expect(() => errorHandler.sendToRenderer(errorContext))
+        .not.toThrow();
+    });
+
+    test('does not send when no window', () => {
+      errorHandler.setMainWindow(null);
+
+      const errorContext = { id: 'err_test', code: 'E001' };
+
+      expect(() => errorHandler.sendToRenderer(errorContext))
+        .not.toThrow();
+    });
+  });
+
+  describe('rotateLogFile', () => {
+    test('creates new log file on first call', () => {
+      fs.readdirSync.mockReturnValue([]);
+
+      errorHandler.rotateLogFile();
+
+      expect(errorHandler.currentLogFile).toBeDefined();
+      expect(errorHandler.currentLogFile).toContain('error-');
+    });
+
+    test('handles rotation errors gracefully', () => {
+      fs.readdirSync.mockImplementation(() => {
+        throw new Error('Read failed');
+      });
+
+      expect(() => errorHandler.rotateLogFile())
+        .not.toThrow();
+    });
+  });
+
+  describe('recovery actions', () => {
+    test('error context includes recovery actions', () => {
+      const error = new Error('Test error');
+      const result = errorHandler.capture(error, { code: 'E001' });
+
+      expect(result.recovery).toBeDefined();
+      expect(Array.isArray(result.recovery)).toBe(true);
+    });
+
+    test('each recovery action has type and label', () => {
+      const error = new Error('Test error');
+      const result = errorHandler.capture(error, { code: 'E003' });
+
+      result.recovery.forEach(action => {
+        expect(action).toHaveProperty('type');
+        expect(action).toHaveProperty('label');
+      });
+    });
+  });
+});

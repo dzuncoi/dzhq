@@ -16,7 +16,9 @@
       "Bash(echo:*)",
       "Bash(ls:*)",
       "Bash(grep:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(npm install:*)",
+      "Bash(npm test:*)"
     ]
   }
 }
