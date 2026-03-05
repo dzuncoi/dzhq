@@ -677,6 +677,11 @@ async function init() {
   window.electronAPI.onAgentRemoved(removeAgent);
   window.electronAPI.onAgentsCleaned(cleanupAgents);
 
+  // Register error event listener (P0-3: Error Recovery)
+  if (window.electronAPI.onErrorOccurred) {
+    window.electronAPI.onErrorOccurred(createErrorUI);
+  }
+
   // Load existing agents
   try {
     const agents = await window.electronAPI.getAllAgents();
@@ -725,6 +730,117 @@ document.addEventListener('visibilitychange', () => {
     }
   }
 });
+
+// --- P0-3: Error Recovery UI ---
+
+// 에어 카운터 (최대 3개까지 표시)
+const errorQueue = [];
+const MAX_ERRORS = 3;
+
+/**
+ * 에러 UI 생성
+ */
+function createErrorUI(errorContext) {
+  // 에러 큐에 추가
+  errorQueue.push(errorContext);
+  if (errorQueue.length > MAX_ERRORS) {
+    errorQueue.shift(); // 가장 오래된 에러 제거
+  }
+
+  // 기존 에러 UI 제거
+  const existing = document.querySelectorAll('.error-toast');
+  existing.forEach(el => el.remove());
+
+  // 새로운 에러 UI 생성
+  errorQueue.forEach((err, index) => {
+    const toast = document.createElement('div');
+    toast.className = 'error-toast';
+    toast.setAttribute('data-error-id', err.id);
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+
+    // 심각도별 스타일
+    const severityClass = err.severity === 'fatal' ? 'error-fatal' :
+                          err.severity === 'error' ? 'error-error' :
+                          err.severity === 'warning' ? 'error-warning' : 'error-info';
+    toast.classList.add(severityClass);
+
+    // 에러 내용
+    const icon = err.severity === 'fatal' ? '💀' :
+                 err.severity === 'error' ? '❌' :
+                 err.severity === 'warning' ? '⚠️' : 'ℹ️';
+
+    toast.innerHTML = `
+      <div class="error-header">
+        <span class="error-icon">${icon}</span>
+        <span class="error-code">${err.code}</span>
+        <button class="error-close" aria-label="닫기">×</button>
+      </div>
+      <div class="error-body">
+        <div class="error-title">${err.userMessage}</div>
+        <div class="error-explanation">${err.explanation}</div>
+      </div>
+      <div class="error-actions">
+        ${err.recovery.map(action => `
+          <button class="error-action-btn" data-action="${action.type}">
+            ${action.label}
+          </button>
+        `).join('')}
+      </div>
+    `;
+
+    // 위치 계산 (우측 상단)
+    toast.style.top = `${10 + index * 120}px`;
+    toast.style.right = '10px';
+
+    // 이벤트 리스너
+    const closeBtn = toast.querySelector('.error-close');
+    closeBtn.addEventListener('click', () => {
+      toast.remove();
+      const idx = errorQueue.findIndex(e => e.id === err.id);
+      if (idx > -1) errorQueue.splice(idx, 1);
+    });
+
+    // 복구 액션 버튼
+    const actionBtns = toast.querySelectorAll('.error-action-btn');
+    actionBtns.forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const action = btn.dataset.action;
+        btn.disabled = true;
+        btn.textContent = '처리 중...';
+
+        try {
+          if (window.electronAPI && window.electronAPI.executeRecoveryAction) {
+            const result = await window.electronAPI.executeRecoveryAction(err.id, action);
+            if (result.success) {
+              btn.textContent = '✓ 완료';
+              setTimeout(() => {
+                toast.remove();
+                const idx = errorQueue.findIndex(e => e.id === err.id);
+                if (idx > -1) errorQueue.splice(idx, 1);
+              }, 1500);
+            } else {
+              btn.textContent = '✗ 실패';
+              setTimeout(() => {
+                btn.disabled = false;
+                btn.textContent = action;
+              }, 2000);
+            }
+          }
+        } catch (e) {
+          console.error('[ErrorUI] Failed to execute recovery action:', e);
+          btn.textContent = '✗ 오류';
+          setTimeout(() => {
+            btn.disabled = false;
+            btn.textContent = action;
+          }, 2000);
+        }
+      });
+    });
+
+    document.body.appendChild(toast);
+  });
+}
 
 // --- Start ---
 init();

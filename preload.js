@@ -21,6 +21,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onAgentRemoved: (cb) => safeOn('agent-removed', cb),
   onAgentsCleaned: (cb) => safeOn('agents-cleaned', cb),
 
+  // 에러 이벤트 (P0-3: Error Recovery)
+  onErrorOccurred: (cb) => safeOn('error-occurred', cb),
+
   // 에이전트 조회
   getAllAgents: () => {
     ipcRenderer.send('get-all-agents');
@@ -44,5 +47,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Mission Control Dashboard methods
   openWebDashboard: () => ipcRenderer.invoke('open-web-dashboard'),
   closeWebDashboard: () => ipcRenderer.invoke('close-web-dashboard'),
-  isWebDashboardOpen: () => ipcRenderer.invoke('is-web-dashboard-open')
+  isWebDashboardOpen: () => ipcRenderer.invoke('is-web-dashboard-open'),
+
+  // Error Recovery methods (P0-3)
+  getErrorLogs: () => ipcRenderer.invoke('get-error-logs'),
+  executeRecoveryAction: (errorId, action) => ipcRenderer.invoke('execute-recovery-action', errorId, action)
 });

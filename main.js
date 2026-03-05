@@ -4,6 +4,7 @@ const os = require('os');
 const fs = require('fs');
 const AgentManager = require('./agentManager');
 const { adaptAgentToMissionControl } = require('./missionControlAdapter');
+const errorHandler = require('./errorHandler');
 
 // Debug logging to file
 const debugLog = (msg) => {
@@ -149,6 +150,9 @@ function createWindow() {
   });
 
   mainWindow.loadFile('index.html');
+
+  // errorHandler에 mainWindow 등록
+  errorHandler.setMainWindow(mainWindow);
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
@@ -298,7 +302,15 @@ function setupClaudeHooks() {
         settings = JSON.parse(rawContent);
       } catch (parseErr) {
         debugLog(`[Main] settings.json parse error: ${parseErr.message}. Backing up.`);
-        try { fs.copyFileSync(settingsPath, settingsPath + '.corrupt_backup'); } catch (e) { }
+        try {
+          fs.copyFileSync(settingsPath, settingsPath + '.corrupt_backup');
+        } catch (e) {
+          errorHandler.capture(e, {
+            code: 'E002',
+            category: 'FILE_IO',
+            severity: 'ERROR'
+          });
+        }
         settings = {};
       }
     }
@@ -342,6 +354,11 @@ function setupClaudeHooks() {
     fs.renameSync(tmpPath, settingsPath);
     debugLog(`[Main] Registered all hooks via hook.js`);
   } catch (e) {
+    errorHandler.capture(e, {
+      code: 'E006',
+      category: 'HOOK_SERVER',
+      severity: 'ERROR'
+    });
     debugLog(`[Main] Failed to setup hooks: ${e.message}`);
   }
 }
@@ -515,6 +532,11 @@ function startHookServer() {
         const data = JSON.parse(body);
         processHookEvent(data);
       } catch (e) {
+        errorHandler.capture(e, {
+          code: 'E002',
+          category: 'PARSE',
+          severity: 'WARNING'
+        });
         debugLog(`[Hook] Parse error: ${e.message}`);
       }
     });
@@ -599,6 +621,11 @@ function recoverExistingSessions() {
 
     debugLog(`[Recover] Done — ${recoveredCount} session(s) restored from state.json`);
   } catch (e) {
+    errorHandler.capture(e, {
+      code: 'E009',
+      category: 'FILE_IO',
+      severity: 'WARNING'
+    });
     debugLog(`[Recover] Error reading or parsing state.json: ${e.message}`);
   }
 
@@ -620,6 +647,11 @@ function recoverExistingSessions() {
       fs.writeFileSync(hooksPath, '');
       debugLog(`[Recover] Finished replaying hooks.jsonl and cleared it.`);
     } catch (e) {
+      errorHandler.capture(e, {
+        code: 'E007',
+        category: 'FILE_IO',
+        severity: 'WARNING'
+      });
       debugLog(`[Recover] Error replaying hooks.jsonl: ${e.message}`);
     }
   }
@@ -902,6 +934,11 @@ ipcMain.on('get-avatars', (event) => {
       event.reply('avatars-response', []);
     }
   } catch (e) {
+    errorHandler.capture(e, {
+      code: 'E003',
+      category: 'FILE_IO',
+      severity: 'WARNING'
+    });
     debugLog(`[Main] get-avatars error: ${e.message}`);
     event.reply('avatars-response', []);
   }
@@ -989,6 +1026,47 @@ ipcMain.handle('is-web-dashboard-open', async (event) => {
   return {
     isOpen: missionControlWindow !== null && !missionControlWindow.isDestroyed()
   };
+});
+
+// Get error logs (P0-3: Error Recovery)
+ipcMain.handle('get-error-logs', async () => {
+  try {
+    const logs = errorHandler.readRecentLogs(100);
+    return { success: true, logs };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Execute recovery action (P0-3: Error Recovery)
+ipcMain.handle('execute-recovery-action', async (event, errorId, action) => {
+  try {
+    debugLog(`[ErrorRecovery] Executing action: ${action} for error: ${errorId}`);
+
+    // TODO: 각 액션별 구현 필요
+    switch (action) {
+      case 'retry':
+        // 재시도 로직
+        break;
+      case 'reset':
+        // 초기화 로직
+        break;
+      case 'view_logs':
+        // 로그 뷰어 열기
+        break;
+      default:
+        break;
+    }
+
+    return { success: true };
+  } catch (error) {
+    errorHandler.capture(error, {
+      code: 'E000',
+      category: 'UNKNOWN',
+      severity: 'ERROR'
+    });
+    return { success: false, error: error.message };
+  }
 });
 
 // Handle focus-agent command from Mission Control
