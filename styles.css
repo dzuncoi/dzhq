@@ -164,6 +164,19 @@ html {
   /* 말풍선 줄바꿈 여유 공간 확보 */
 }
 
+/* 키보드 포커스 스타일 */
+.agent-card:focus-visible,
+.agent-character:focus-visible,
+.web-dashboard-btn:focus-visible {
+  outline: 3px solid #2196f3;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.agent-card:focus-visible {
+  background: rgba(33, 150, 243, 0.1);
+}
+
 /* ════════════════════════════════════════
    New: Agent Header & Tags
    ════════════════════════════════════════ */
@@ -200,7 +213,7 @@ html {
   max-width: 150px;
   width: max-content;
   z-index: 999999;
-  font-size: 9px;
+  font-size: 11px;
   text-align: center;
   pointer-events: none;
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.6);
@@ -209,12 +222,12 @@ html {
 .project-tag {
   display: block;
   font-family: 'Pretendard Variable', sans-serif;
-  font-size: 9.5px;
+  font-size: 11px;
   /* 폰트 약간 더 크게 */
   font-weight: 800;
   color: #fff;
   background: rgba(0, 0, 0, 0.7);
-  padding: 1px 5px;
+  padding: 2px 6px;
   border-radius: 4px;
   max-width: 60px;
   /* 말줄임이 더 빨리, 많이 오도록 폭 축소 */
@@ -227,11 +240,11 @@ html {
 .type-tag {
   display: inline-block;
   font-family: 'Pretendard Variable', sans-serif;
-  font-size: 8.5px;
+  font-size: 11px;
   font-weight: 800;
   /* 900 -> 800 변경해서 약간 부드럽게 */
   text-transform: uppercase;
-  padding: 1px 5px;
+  padding: 2px 6px;
   /* 박스 크기 슬림하게 축소 */
   border-radius: 4px;
   letter-spacing: 0.05em;
@@ -249,9 +262,9 @@ html {
 
 /* 타입별 스타일 - 너무 튀지 않게 조화로운 톤다운 색상으로 변경 */
 .type-tag.type-main {
-  background: #d46b78;
-  /* 부드러운 장미색 (Main) */
-  border: 1px solid #b5535e;
+  background: #c85a68;
+  /* 진한 장미색 (Main) - WCAG AA 준수를 위해 진하게 */
+  border: 1px solid #a64855;
 }
 
 .type-tag.type-sub {
@@ -303,13 +316,13 @@ html {
 /* 상태 말풍선 (컬러 테두리) */
 .agent-bubble {
   font-family: 'Pretendard Variable', Pretendard, sans-serif;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   background: rgba(255, 255, 255, 0.97);
   border: 2px solid #9e9e9e;
   /* 기본: gray (Idle) */
   border-radius: 6px;
-  padding: 3px 6px;
+  padding: 4px 8px;
   text-align: center;
   color: #333;
   white-space: pre-wrap;
@@ -326,7 +339,7 @@ html {
 
 /* 타이머 표시용 요소 */
 .agent-timer {
-  font-size: 8.5px;
+  font-size: 11px;
   color: #666;
   margin-top: 2px;
   font-weight: 600;
@@ -351,7 +364,8 @@ html {
 .agent-bubble.is-alert,
 .agent-card.state-alert .agent-bubble {
   border-color: #f44336;
-  color: #d32f2f;
+  color: #b71c1c;
+  /* 더 진한 빨간색으로 대비비 개선 */
 }
 
 .agent-bubble.is-offline,
@@ -419,14 +433,14 @@ html {
 /* 이름 뱃지 (캐릭터 아래쪽) */
 .agent-name {
   font-family: 'Pretendard Variable', Pretendard, sans-serif;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: #fff;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   background: rgba(0, 0, 0, 0.65);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
-  padding: 2px 8px;
+  padding: 3px 9px;
   margin-top: -6px;
   /* 캐릭터 라인에 살짝 걸치게 */
   max-width: 80px;
@@ -579,7 +593,7 @@ html {
 }
 
 .agent-card.is-subagent .agent-bubble {
-  font-size: 9px;
+  font-size: 11px;
   border-style: dashed;
   border-color: #9c27b0;
   color: #6a1b9a;
@@ -606,10 +620,10 @@ html {
   background: #9c27b0;
   color: #fff;
   font-family: 'Pretendard Variable', Pretendard, sans-serif;
-  font-size: 7px;
+  font-size: 10px;
   font-weight: 800;
-  padding: 1px 4px;
-  border-radius: 3px;
+  padding: 2px 5px;
+  border-radius: 4px;
   letter-spacing: 0.5px;
   z-index: 10;
   pointer-events: none;
