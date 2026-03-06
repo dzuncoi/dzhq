@@ -15,13 +15,14 @@ function createWindowManager({ agentManager, sessionScanner, heatmapScanner, deb
 
   function resizeWindowForAgents(agentsOrCount) {
     if (!mainWindow || mainWindow.isDestroyed()) return;
-    const { width } = getWindowSizeForAgents(agentsOrCount);
+    const { width, height } = getWindowSizeForAgents(agentsOrCount);
     const bounds = mainWindow.getBounds();
-    if (width !== bounds.width) {
-      mainWindow.setBounds({ ...bounds, width: width });
-    }
+    if (width === bounds.width && height === bounds.height) return;
+    const dh = height - bounds.height;
+    const newY = Math.max(0, bounds.y - dh);
+    mainWindow.setBounds({ x: bounds.x, y: newY, width, height });
     const info = Array.isArray(agentsOrCount) ? agentsOrCount.length : agentsOrCount;
-    debugLog(`[Main] Window width → ${width} (${info} agents based layout)`);
+    debugLog(`[Main] Window → ${width}x${height} (${info} agents)`);
   }
 
   function createWindow() {

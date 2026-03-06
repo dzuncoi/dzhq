@@ -37,58 +37,6 @@ if ($hwnd -ne [IntPtr]::Zero) {
 }
 
 function registerIpcHandlers({ agentManager, sessionPids, windowManager, debugLog, adaptAgentToDashboard, errorHandler }) {
-  // 리사이즈 애니메이션 상태
-  let _resizeAnimTimer = null;
-
-  ipcMain.on('resize-window', (e, size) => {
-    const mw = windowManager.mainWindow;
-    if (mw && !mw.isDestroyed()) {
-      const { width, height, x, y } = mw.getBounds();
-
-      const newWidth = Math.max(220, Math.ceil(size.width ? size.width + 30 : width));
-      const newHeight = Math.max(240, Math.ceil(size.height ? size.height + 40 : height));
-
-      if (newWidth === width && newHeight === height) return;
-
-      // 이전 애니메이션 취소
-      if (_resizeAnimTimer) {
-        clearInterval(_resizeAnimTimer);
-        _resizeAnimTimer = null;
-      }
-
-      // 4단계(50ms 간격) 애니메이션으로 부드럽게 전환
-      const steps = 4;
-      const stepInterval = 50;
-      const dw = newWidth - width;
-      const dh = newHeight - height;
-      const diffHeight = newHeight - height;
-      const finalY = Math.max(0, y - diffHeight);
-      const dy = finalY - y;
-      let step = 0;
-
-      _resizeAnimTimer = setInterval(() => {
-        step++;
-        const t = step / steps;
-        // ease-out quad
-        const ease = t * (2 - t);
-        const curW = Math.round(width + dw * ease);
-        const curH = Math.round(height + dh * ease);
-        const curY = Math.round(y + dy * ease);
-
-        if (mw && !mw.isDestroyed()) {
-          mw.setBounds({ x, width: curW, height: curH, y: curY });
-        }
-
-        if (step >= steps) {
-          clearInterval(_resizeAnimTimer);
-          _resizeAnimTimer = null;
-        }
-      }, stepInterval);
-
-      debugLog(`[Main] IPC Resize → ${newWidth}x${newHeight} (animated)`);
-    }
-  });
-
   ipcMain.on('get-work-area', (event) => {
     event.reply('work-area-response', screen.getPrimaryDisplay().workArea);
   });

@@ -177,6 +177,7 @@ app.whenReady().then(() => {
         const adaptedAgent = adaptAgentToDashboard(agent);
         dw.webContents.send('dashboard-agent-added', adaptedAgent);
       }
+      windowManager.resizeWindowForAgents(agentManager.getAllAgents());
       savePersistedState({ agentManager, sessionPids });
     });
 
@@ -202,6 +203,7 @@ app.whenReady().then(() => {
       if (dw && !dw.isDestroyed()) {
         dw.webContents.send('dashboard-agent-removed', data);
       }
+      windowManager.resizeWindowForAgents(agentManager.getAllAgents());
       savePersistedState({ agentManager, sessionPids });
       // 모든 에이전트가 사라지면 대시보드도 닫기
       if (agentManager.getAllAgents().length === 0) {
@@ -218,6 +220,7 @@ app.whenReady().then(() => {
       if (dw && !dw.isDestroyed()) {
         dw.webContents.send('dashboard-agent-removed', { type: 'batch', ...data });
       }
+      windowManager.resizeWindowForAgents(agentManager.getAllAgents());
       savePersistedState({ agentManager, sessionPids });
       // 모든 에이전트가 사라지면 대시보드도 닫기
       if (agentManager.getAllAgents().length === 0) {

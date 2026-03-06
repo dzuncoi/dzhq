@@ -17,7 +17,6 @@ function addAgent(agent) {
 
   updateAgentState(agent.id, card, agent);
   updateGridLayout();
-  requestDynamicResize();
 }
 
 function updateAgent(agent) {
@@ -35,7 +34,6 @@ function updateAgent(agent) {
 
   updateAgentState(agent.id, card, agent);
   updateGridLayout();
-  requestDynamicResize();
 }
 
 function removeAgent(data) {
@@ -64,7 +62,6 @@ function removeAgent(data) {
   setTimeout(() => {
     card.remove();
     updateGridLayout();
-    requestDynamicResize();
   }, 250);
 }
 
@@ -204,27 +201,3 @@ function updateGridLayout() {
 
 }
 
-// 윈도우 높이 오토 조절 로직 (500ms 쓰로틀)
-let resizeObserver = null;
-let _resizeTimer = null;
-function requestDynamicResize() {
-  if (!window.electronAPI || !window.electronAPI.resizeWindow) return;
-  if (_resizeTimer) return; // 쓰로틀 중
-  _resizeTimer = setTimeout(() => {
-    _resizeTimer = null;
-    const grid = document.getElementById('agent-grid');
-    if (!grid) return;
-
-    const width = grid.scrollWidth;
-    const height = grid.scrollHeight;
-
-    if (width < 100 || height < 100) return;
-
-    window.electronAPI.resizeWindow({ width, height });
-  }, 500);
-}
-
-if (window.ResizeObserver) {
-  resizeObserver = new ResizeObserver(() => requestDynamicResize());
-  if (agentGrid) resizeObserver.observe(agentGrid);
-}
