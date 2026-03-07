@@ -1,5 +1,5 @@
 /**
- * Session Scanner — Task 3A-4
+ * Session Scanner
  * Node.js implementation of the claude-sessions.ts pattern from Mission Control.
  * Parses transcript_path (JSONL) files every 60 seconds to extract token/cost/session
  * statistics and supplements them into the agentManager.
@@ -10,7 +10,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { MODEL_PRICING, DEFAULT_PRICING, roundCost } = require('./pricing');
+const { roundCost, calculateTokenCost } = require('./pricing');
 
 class SessionScanner {
     /**
@@ -160,14 +160,11 @@ class SessionScanner {
             }
         }
 
-        // Calculate cost (applying cache discount/premium)
-        const pricing = (model && MODEL_PRICING[model]) || DEFAULT_PRICING;
         const totalInputTokens = inputTokens + cacheReadTokens + cacheCreationTokens;
-        const estimatedCost =
-            inputTokens * pricing.input +
-            cacheReadTokens * pricing.input * 0.1 +  // Cache read 10% discount
-            cacheCreationTokens * pricing.input * 1.25 +  // Cache write 25% premium
-            outputTokens * pricing.output;
+        const estimatedCost = calculateTokenCost({
+            input: inputTokens, cacheRead: cacheReadTokens,
+            cacheCreate: cacheCreationTokens, output: outputTokens
+        }, model);
 
         return {
             model,

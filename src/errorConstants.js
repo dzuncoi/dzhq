@@ -1,5 +1,5 @@
 /**
- * P0-3: Error Recovery System - Error Constants
+ * Error Constants
  * Error codes, categories, severity levels, and recovery action types
  */
 

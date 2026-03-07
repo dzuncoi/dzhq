@@ -103,13 +103,13 @@ var officeRenderer = {
       const spot = laptopSpots[i];
       const seatId = LAPTOP_ID_MAP[i] !== undefined ? LAPTOP_ID_MAP[i] : i;
 
-      var isAtDesk = chars.some(function (a) {
+      const isAtDesk = chars.some(function (a) {
         return a.deskIndex === seatId &&
           (a.agentState === 'working' || a.agentState === 'thinking' ||
            a.agentState === 'error' || a.agentState === 'help');
       });
 
-      var img = isAtDesk ? this.laptopOpenImages[spot.dir] : this.laptopImages[spot.dir];
+      const img = isAtDesk ? this.laptopOpenImages[spot.dir] : this.laptopImages[spot.dir];
       if (img) ctx.drawImage(img, spot.x, spot.y);
     }
 
@@ -123,7 +123,7 @@ var officeRenderer = {
       let floatY = 0;
 
       // Per-agent phase offset (prevent simultaneous wobble in the same direction)
-      var phaseOffset = (agent.id ? agent.id.charCodeAt(0) : 0) * 0.7;
+      const phaseOffset = (agent.id ? agent.id.charCodeAt(0) : 0) * 0.7;
 
       if (agent.agentState === 'working') {
         floatY = Math.sin(time * 0.01 + phaseOffset) * 3;
@@ -136,8 +136,8 @@ var officeRenderer = {
         scaleY = 0.98 + Math.sin(time * 0.005 + phaseOffset) * 0.02;
       }
 
-      var isSubType = agent.metadata && agent.metadata.type === 'sub';
-      var baseScale = isSubType ? 0.85 : 1.0;
+      const isSubType = agent.metadata && agent.metadata.type === 'sub';
+      const baseScale = isSubType ? 0.85 : 1.0;
 
       ctx.save();
       ctx.translate(agent.x, agent.y);
@@ -266,9 +266,9 @@ var officeRenderer = {
         ctx.fillText(chars[charIdx], 0, 0);
       } else if (fx.type === 'stateChange') {
         // Expanding circular ring effect
-        var elapsed = performance.now() - fx.startTime;
-        var t = elapsed / fx.duration;
-        var radius = 8 + t * 20;
+        const elapsed = performance.now() - fx.startTime;
+        const t = elapsed / fx.duration;
+        const radius = 8 + t * 20;
         ctx.strokeStyle = fx.color || '#f97316';
         ctx.lineWidth = 2 * (1 - t);
         ctx.beginPath();

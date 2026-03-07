@@ -19,11 +19,11 @@ Claude CLI ──HTTP hook──▶ POST(:47821) ──▶ hookProcessor
                                               │
                                     ┌─────────┤
                                     ▼         ▼
-                              agentManager  dashboard-server(:3000)
+                              agentManager  agent-desk-server(:3000)
                                   │              │
                                   ▼              ▼
                             renderer/*      dashboard.html
-                          (pixel avatar)   (web dashboard + office)
+                          (pixel avatar)   (agent desk + office)
 ```
 
 ### Key Modules
@@ -33,9 +33,19 @@ Claude CLI ──HTTP hook──▶ POST(:47821) ──▶ hookProcessor
 | Main | `src/main.js` | Module init, event wiring, app lifecycle |
 | Hook Server | `src/main/hookServer.js` | HTTP :47821, AJV schema validation |
 | Hook Processor | `src/main/hookProcessor.js` | Event switch + state mapping |
+| Hook Registration | `src/main/hookRegistration.js` | Claude CLI hook auto-registration |
 | Liveness Checker | `src/main/livenessChecker.js` | PID detection, zombie sweep (2s/30s) |
+| Window Manager | `src/main/windowManager.js` | Electron window lifecycle, dashboard server |
+| IPC Handlers | `src/main/ipcHandlers.js` | IPC channel handlers, terminal focus |
+| Session Persistence | `src/main/sessionPersistence.js` | State persistence, session recovery |
 | Agent Manager | `src/agentManager.js` | Agent state Map, event emitting (SSoT) |
-| Dashboard Server | `src/dashboard-server.js` | REST API + SSE for web dashboard |
+| Dashboard Adapter | `src/dashboardAdapter.js` | Agent state → dashboard format mapping |
+| Agent Desk Server | `src/dashboard-server.js` | REST API + SSE for Agent Desk |
+| Session Scanner | `src/sessionScanner.js` | JSONL parsing for token/cost stats |
+| Heatmap Scanner | `src/heatmapScanner.js` | Daily activity aggregation (GitHub-style) |
+| Pricing | `src/pricing.js` | Per-model token pricing, context window sizes |
+| Error Handler | `src/errorHandler.js` | Error capture, logging, deduplication |
+| Utils | `src/utils.js` | Display name formatting, window sizing |
 | Renderer | `src/renderer/*.js` | Pixel avatar Canvas rendering |
 | Virtual Office | `src/office/*.js` | 2D pixel art office (A* pathfinding, sprites) |
 

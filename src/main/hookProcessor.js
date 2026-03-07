@@ -115,7 +115,7 @@ function createHookProcessor({ agentManager, sessionPids, debugLog, detectClaude
         if (agentManager && firstPreToolUseDone.has(sessionId)) {
           const agent = agentManager.getAgent(sessionId);
           if (agent) {
-            // Task 3A-3: Extract tool_response.token_usage
+            // Extract tool_response.token_usage
             const tokenUsage = data.tool_response && data.tool_response.token_usage;
             if (tokenUsage) {
               const cur = agent.tokenUsage || { inputTokens: 0, outputTokens: 0, estimatedCost: 0 };

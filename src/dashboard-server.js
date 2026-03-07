@@ -26,11 +26,11 @@ const MIME_TYPES = {
 
 // Global references
 let agentManager = null;
-let sessionScanner = null;  // Task 3B-2
+let sessionScanner = null;
 let heatmapScanner = null;
 let missionControlWindow = null;
 const wsClients = new Set();
-const sseClients = new Set();  // Task 3B-1: SSE clients
+const sseClients = new Set();
 
 /**
  * Set the agent manager reference
@@ -38,7 +38,6 @@ const sseClients = new Set();  // Task 3B-1: SSE clients
 function setAgentManager(manager) {
   agentManager = manager;
 
-  // Task 3B-1: AgentManager events → SSE broadcast
   if (agentManager) {
     agentManager.on('agent-added', (agent) => {
       const adapted = adaptAgentToDashboard(agent);
@@ -58,7 +57,7 @@ function setAgentManager(manager) {
 }
 
 /**
- * Set the session scanner reference (Task 3B-2)
+ * Set the session scanner reference
  */
 function setSessionScanner(scanner) {
   sessionScanner = scanner;
@@ -145,7 +144,7 @@ function calculateStats() {
     }
   }
 
-  // Task 3B-2: Token/cost aggregation
+  // Token/cost aggregation
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
   let totalEstimatedCost = 0;
@@ -168,7 +167,7 @@ function calculateStats() {
 }
 
 /**
- * Task 3B-1: SSE broadcast
+ * SSE broadcast
  */
 function broadcastSSE(type, data) {
   const payload = `event: ${type}\ndata: ${JSON.stringify({ type, data, timestamp: Date.now() })}\n\n`;
@@ -284,7 +283,7 @@ function handleAPIRequest(req, res, url) {
     return;
   }
 
-  // ─── Task 3B-1: SSE event stream ───
+  // ─── SSE event stream ───
   if (pathname === '/api/events' && req.method === 'GET') {
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -345,7 +344,7 @@ function handleAPIRequest(req, res, url) {
     return;
   }
 
-  // ─── GET /api/sessions — JSONL scan results (Task 3B-2) ───
+  // ─── GET /api/sessions — JSONL scan results ───
   if (pathname === '/api/sessions' && req.method === 'GET') {
     const allStats = sessionScanner ? sessionScanner.getAllStats() : {};
     res.writeHead(200, { 'Content-Type': 'application/json' });

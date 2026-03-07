@@ -79,7 +79,6 @@ class AgentManager extends EventEmitter {
       displayName: this.formatDisplayName(entry.slug, entry.projectPath),
       projectPath: entry.projectPath,
       jsonlPath: entry.jsonlPath || (existingAgent ? existingAgent.jsonlPath : null),
-      // Task 3A-2: New metadata fields
       model: entry.model !== undefined ? entry.model : (existingAgent ? existingAgent.model : null),
       permissionMode: entry.permissionMode !== undefined ? entry.permissionMode : (existingAgent ? existingAgent.permissionMode : null),
       source: entry.source !== undefined ? entry.source : (existingAgent ? existingAgent.source : null),
@@ -93,7 +92,6 @@ class AgentManager extends EventEmitter {
       // Team information
       teammateName: entry.teammateName !== undefined ? entry.teammateName : (existingAgent ? existingAgent.teammateName : null),
       teamName: entry.teamName !== undefined ? entry.teamName : (existingAgent ? existingAgent.teamName : null),
-      // Task 3A-3: Token usage (accumulated from hooks, supplemented by scanner)
       tokenUsage: entry.tokenUsage !== undefined ? entry.tokenUsage : (existingAgent ? existingAgent.tokenUsage : { inputTokens: 0, outputTokens: 0, estimatedCost: 0 }),
       avatarIndex: existingAgent ? existingAgent.avatarIndex : this._assignAvatarIndex(agentId),
       isSubagent: entry.isSubagent || (existingAgent ? existingAgent.isSubagent : false),

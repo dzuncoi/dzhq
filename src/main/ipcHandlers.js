@@ -9,7 +9,9 @@ const fs = require('fs');
 
 function focusTerminalByPid(pid, label, debugLog) {
   const { execFile } = require('child_process');
-  const psScript = `
+
+  if (process.platform === 'win32') {
+    const psScript = `
 $memberDef = '[DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);' +
   '[DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int c);' +
   '[DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);'
@@ -31,9 +33,40 @@ if ($hwnd -ne [IntPtr]::Zero) {
   [FocusUtil.W]::SetForegroundWindow($hwnd) | Out-Null
 }
 `;
-  execFile('powershell.exe', ['-NoProfile', '-Command', psScript], { timeout: 5000 }, (err) => {
-    if (err) debugLog(`[${label}] Focus error: ${err.message}`);
-  });
+    execFile('powershell.exe', ['-NoProfile', '-Command', psScript], { timeout: 5000 }, (err) => {
+      if (err) debugLog(`[${label}] Focus error: ${err.message}`);
+    });
+
+  } else if (process.platform === 'darwin') {
+    // macOS: walk up parent chain to find a terminal window, then activate it
+    const script = `
+      tell application "System Events"
+        set targetPid to ${pid}
+        repeat 5 times
+          try
+            set proc to first process whose unix id is targetPid
+            set frontmost of proc to true
+            return
+          end try
+          try
+            set targetPid to unix id of (first process whose unix id is targetPid)'s parent process
+          on error
+            exit repeat
+          end try
+        end repeat
+      end tell
+    `;
+    execFile('osascript', ['-e', script], { timeout: 5000 }, (err) => {
+      if (err) debugLog(`[${label}] Focus error: ${err.message}`);
+    });
+
+  } else {
+    // Linux: use wmctrl if available, fall back to xdotool
+    const { exec } = require('child_process');
+    exec(`wmctrl -i -a $(wmctrl -lp | awk '$3 == ${pid} {print $1; exit}') 2>/dev/null || xdotool search --pid ${pid} --onlyvisible windowactivate 2>/dev/null`, { timeout: 5000 }, (err) => {
+      if (err) debugLog(`[${label}] Focus error (install wmctrl or xdotool): ${err.message}`);
+    });
+  }
 }
 
 function registerIpcHandlers({ agentManager, sessionPids, windowManager, debugLog, adaptAgentToDashboard, errorHandler }) {
@@ -96,31 +129,7 @@ function registerIpcHandlers({ agentManager, sessionPids, windowManager, debugLo
     }
   });
 
-  ipcMain.handle('execute-recovery-action', async (event, errorId, action) => {
-    try {
-      debugLog(`[ErrorRecovery] Executing action: ${action} for error: ${errorId}`);
-
-      switch (action) {
-        case 'retry':
-          break;
-        case 'reset':
-          break;
-        case 'view_logs':
-          break;
-        default:
-          break;
-      }
-
-      return { success: true };
-    } catch (error) {
-      errorHandler.capture(error, {
-        code: 'E000',
-        category: 'UNKNOWN',
-        severity: 'ERROR'
-      });
-      return { success: false, error: error.message };
-    }
-  });
+  ipcMain.handle('execute-recovery-action', async () => ({ success: true }));
 
   ipcMain.on('dashboard-focus-agent', (event, agentId) => {
     const pid = sessionPids.get(agentId);

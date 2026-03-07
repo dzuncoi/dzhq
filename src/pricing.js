@@ -44,4 +44,21 @@ function roundCost(cost) {
     return Math.round(cost * 100000) / 100000;
 }
 
-module.exports = { MODEL_PRICING, DEFAULT_PRICING, MODEL_CONTEXT_WINDOWS, DEFAULT_CONTEXT_WINDOW, getContextWindowSize, roundCost };
+const CACHE_READ_DISCOUNT = 0.1;
+const CACHE_CREATION_PREMIUM = 1.25;
+
+/**
+ * Calculate token cost with cache discount/premium
+ * @param {{ input: number, cacheRead: number, cacheCreate: number, output: number }} tokens
+ * @param {string|null} model
+ * @returns {number}
+ */
+function calculateTokenCost({ input, cacheRead, cacheCreate, output }, model) {
+    const pricing = (model && MODEL_PRICING[model]) || DEFAULT_PRICING;
+    return input * pricing.input +
+        cacheRead * pricing.input * CACHE_READ_DISCOUNT +
+        cacheCreate * pricing.input * CACHE_CREATION_PREMIUM +
+        output * pricing.output;
+}
+
+module.exports = { MODEL_PRICING, DEFAULT_PRICING, MODEL_CONTEXT_WINDOWS, DEFAULT_CONTEXT_WINDOW, getContextWindowSize, roundCost, calculateTokenCost };

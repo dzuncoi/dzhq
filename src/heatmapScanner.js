@@ -10,7 +10,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { MODEL_PRICING, DEFAULT_PRICING, roundCost } = require('./pricing');
+const { roundCost, calculateTokenCost } = require('./pricing');
 
 /** Retention period (days) */
 const MAX_AGE_DAYS = 400;
@@ -221,15 +221,10 @@ class HeatmapScanner {
           day.inputTokens += input + cacheRead + cacheCreate;
           day.outputTokens += output;
 
-          // Cost calculation
           const model = entry.message.model || null;
-          const pricing = (model && MODEL_PRICING[model]) || DEFAULT_PRICING;
-          const entryCost = roundCost(
-            input * pricing.input +
-            cacheRead * pricing.input * 0.1 +
-            cacheCreate * pricing.input * 1.25 +
-            output * pricing.output
-          );
+          const entryCost = roundCost(calculateTokenCost(
+            { input, cacheRead, cacheCreate, output }, model
+          ));
           day.estimatedCost += entryCost;
 
           // Per-model aggregation

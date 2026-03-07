@@ -6,8 +6,8 @@ function createWebDashboardButton() {
   const button = document.createElement('button');
   button.id = 'web-dashboard-btn';
   button.className = 'web-dashboard-btn';
-  button.innerHTML = '🌐 Dashboard';
-  button.title = 'Open dashboard (Ctrl+D)';
+  button.innerHTML = '🌐 Agent Desk';
+  button.title = 'Open Agent Desk (Ctrl+D)';
 
   button.onclick = async () => {
     button.disabled = true;
@@ -21,7 +21,7 @@ function createWebDashboardButton() {
         if (result.success) {
           button.innerHTML = '✓ Opened';
           setTimeout(() => {
-            button.innerHTML = '🌐 Dashboard';
+            button.innerHTML = '🌐 Agent Desk';
             button.disabled = false;
           }, 2000);
         } else {

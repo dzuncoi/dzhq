@@ -1,5 +1,5 @@
 /**
- * P0-3: Error Recovery System - Central Error Handler
+ * Central Error Handler
  * Captures, classifies, logs, and forwards all errors to the UI
  */
 const { app } = require('electron');
@@ -7,7 +7,7 @@ const path = require('path');
 const fs = require('fs');
 
 const { ErrorSeverity, ErrorCategory } = require('./errorConstants');
-const { getMessageByErrorCode, getMessageByErrorName } = require('./errorMessages');
+const { getMessageByErrorCode } = require('./errorMessages');
 
 class ErrorHandler {
   constructor() {
@@ -74,7 +74,7 @@ class ErrorHandler {
   }
 
   /**
-   * P1-2: Capture and process an error (async logging)
+   * Capture and process an error (async logging)
    * @param {Error|object} error - Error object
    * @param {object} context - Additional context
    * @returns {object} Normalized error context
@@ -95,7 +95,6 @@ class ErrorHandler {
         this.deduplicationSet.delete(dedupKey);
       }, 5000);
 
-      // P1-2: Async log writing
       await this.logToFile(errorContext);
 
       // Send to renderer
@@ -142,7 +141,7 @@ class ErrorHandler {
   }
 
   /**
-   * P1-2: Write to log file (async)
+   * Write to log file (async)
    */
   async logToFile(errorContext) {
     if (!this.currentLogFile) return;
@@ -160,7 +159,6 @@ class ErrorHandler {
 
       const logLine = JSON.stringify(logEntry) + '\n';
 
-      // P1-2: Async file write (using fs.promises)
       await fs.promises.appendFile(this.currentLogFile, logLine, 'utf8');
     } catch (e) {
       console.error('[ErrorHandler] Failed to write log:', e);

@@ -9,7 +9,6 @@ const path = require('path');
 function createWindowManager({ agentManager, sessionScanner, heatmapScanner, debugLog, adaptAgentToDashboard, errorHandler, getWindowSizeForAgents }) {
   let mainWindow = null;
   let dashboardWindow = null;
-  let dashboardAuthToken = null;
   let keepAliveInterval = null;
   let dashboardServer = null;
 
@@ -162,13 +161,11 @@ function createWindowManager({ agentManager, sessionScanner, heatmapScanner, deb
         debugLog(`[MissionControl] Failed to load: ${errorCode} - ${errorDescription}`);
         dashboardWindow.destroy();
         dashboardWindow = null;
-        dashboardAuthToken = null;
       });
 
       dashboardWindow.on('closed', () => {
         debugLog('[MissionControl] Window closed');
         dashboardWindow = null;
-        dashboardAuthToken = null;
       });
 
       debugLog('[MissionControl] Window created');
@@ -177,8 +174,7 @@ function createWindowManager({ agentManager, sessionScanner, heatmapScanner, deb
     } catch (error) {
       debugLog(`[MissionControl] Failed to create window: ${error.message}`);
       dashboardWindow = null;
-      dashboardAuthToken = null;
-      return { success: false, error: error.message };
+        return { success: false, error: error.message };
     }
   }
 
@@ -188,7 +184,6 @@ function createWindowManager({ agentManager, sessionScanner, heatmapScanner, deb
       debugLog('[MissionControl] Window closed by request');
     }
     dashboardWindow = null;
-    dashboardAuthToken = null;
   }
 
   function startDashboardServer() {

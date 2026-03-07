@@ -20,9 +20,9 @@ var officeCharacters = {
     const officeState = this._mapStatus(agentData.status);
 
     // Prefer server-assigned avatarIndex, fallback: hash calculation
-    var avatarIdx = (agentData.avatarIndex !== undefined && agentData.avatarIndex !== null)
+    const avatarIdx = (agentData.avatarIndex !== undefined && agentData.avatarIndex !== null)
       ? agentData.avatarIndex : avatarIndexFromId(agentData.id);
-    var avatarFile = AVATAR_FILES[avatarIdx] || AVATAR_FILES[0];
+    const avatarFile = AVATAR_FILES[avatarIdx] || AVATAR_FILES[0];
 
     const char = {
       id: agentData.id,
@@ -94,7 +94,7 @@ var officeCharacters = {
 
       // Trigger effect on state change
       if (typeof officeRenderer !== 'undefined') {
-        var stateColor = STATE_COLORS[newState] || '#94a3b8';
+        const stateColor = STATE_COLORS[newState] || '#94a3b8';
         officeRenderer.spawnEffect('stateChange', char.x, char.y - 32, stateColor);
         if (newState === 'done') {
           officeRenderer.spawnEffect('confetti', char.x, char.y - 45);
@@ -119,7 +119,7 @@ var officeCharacters = {
     // Collect available seats
     const usedDesks = new Set(this.seatAssignments.keys());
     const deskCoords = officeCoords.desk || [];
-    var available = [];
+    const available = [];
     for (let i = 0; i < deskCoords.length; i++) {
       if (!usedDesks.has(i)) available.push(i);
     }
@@ -131,8 +131,8 @@ var officeCharacters = {
     }
 
     // Deterministic random based on agent ID (same agent gets same preference)
-    var hash = avatarIndexFromId(agentId);
-    var idx = available[hash % available.length];
+    const hash = avatarIndexFromId(agentId);
+    const idx = available[hash % available.length];
     char.deskIndex = idx;
     this.seatAssignments.set(idx, agentId);
   },
@@ -176,7 +176,7 @@ var officeCharacters = {
       if (char.deskOverflow) {
         if (char.path.length > 0 && char.pathIndex < char.path.length) return;
         // Select one of the idle coords near the desk area
-        var nearIdle = this._findNearDeskIdleSpot(char);
+        const nearIdle = this._findNearDeskIdleSpot(char);
         if (nearIdle) {
           if (Math.abs(char.x - nearIdle.x) < 5 && Math.abs(char.y - nearIdle.y) < 5) return;
           char.path = officePathfinder.findPath(char.x, char.y, nearIdle.x, nearIdle.y);
@@ -324,19 +324,19 @@ var officeCharacters = {
 
     if (text) {
       // working/thinking/help/error states are displayed persistently while active
-      var isPersistent = (status === 'working' || status === 'thinking' || status === 'help' || status === 'error');
+      const isPersistent = (status === 'working' || status === 'thinking' || status === 'help' || status === 'error');
       char.bubble = { text: text, icon: icon, expiresAt: isPersistent ? Infinity : Date.now() + 8000 };
     }
   },
 
   /** D6: Find an available idle coordinate near the desk area (for overflow agents) */
   _findNearDeskIdleSpot: function (char) {
-    var coords = officeCoords;
+    const coords = officeCoords;
     if (!coords || !coords.idle || !coords.desk || coords.desk.length === 0) return null;
 
     // Calculate average coordinates of the desk area
-    var avgX = 0, avgY = 0;
-    for (var i = 0; i < coords.desk.length; i++) {
+    let avgX = 0, avgY = 0;
+    for (let i = 0; i < coords.desk.length; i++) {
       avgX += coords.desk[i].x;
       avgY += coords.desk[i].y;
     }
@@ -344,30 +344,30 @@ var officeCharacters = {
     avgY /= coords.desk.length;
 
     // Sort idle coords by distance from desk average coordinates
-    var occupied = {};
+    const occupied = {};
     this.characters.forEach(function (a) {
       if (a.id === char.id) return;
-      var ax = Math.floor(a.x), ay = Math.floor(a.y);
+      let ax = Math.floor(a.x), ay = Math.floor(a.y);
       if (a.path.length > 0) {
-        var t = a.path[a.path.length - 1];
+        const t = a.path[a.path.length - 1];
         ax = Math.floor(t.x);
         ay = Math.floor(t.y);
       }
       occupied[ax + ',' + ay] = true;
     });
 
-    var candidates = coords.idle.filter(function (p) {
+    const candidates = coords.idle.filter(function (p) {
       return !occupied[Math.floor(p.x) + ',' + Math.floor(p.y)];
     }).sort(function (a, b) {
-      var da = Math.abs(a.x - avgX) + Math.abs(a.y - avgY);
-      var db = Math.abs(b.x - avgX) + Math.abs(b.y - avgY);
+      const da = Math.abs(a.x - avgX) + Math.abs(a.y - avgY);
+      const db = Math.abs(b.x - avgX) + Math.abs(b.y - avgY);
       return da - db;
     });
 
     // Deterministic selection (based on agent ID)
     if (candidates.length === 0) return null;
-    var hash = avatarIndexFromId(char.id);
-    return candidates[hash % Math.min(candidates.length, 5)];
+    const idHash = avatarIndexFromId(char.id);
+    return candidates[idHash % Math.min(candidates.length, 5)];
   },
 
   getCharacterArray: function () {

@@ -6,8 +6,10 @@
 const http = require('http');
 const Ajv = require('ajv');
 
+const MAX_BODY_SIZE = 1024 * 1024; // 1MB
+
 function startHookServer({ processHookEvent, debugLog, HOOK_SERVER_PORT, errorHandler }) {
-  // P1-3: JSON Schema for hook validation (Task 3A-1: updated based on actual Claude hook fields)
+  // JSON Schema for hook validation
   const hookSchema = {
     type: 'object',
     required: ['hook_event_name'],
@@ -58,7 +60,12 @@ function startHookServer({ processHookEvent, debugLog, HOOK_SERVER_PORT, errorHa
     }
 
     let body = '';
-    req.on('data', chunk => { body += chunk; });
+    req.on('data', chunk => {
+      body += chunk;
+      if (body.length > MAX_BODY_SIZE) {
+        res.writeHead(413); res.end(); req.destroy(); return;
+      }
+    });
     req.on('end', () => {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: true }));
@@ -67,7 +74,7 @@ function startHookServer({ processHookEvent, debugLog, HOOK_SERVER_PORT, errorHa
         const data = JSON.parse(body);
         debugLog(`[Hook] ← ${data.hook_event_name || '?'} session=${(data.session_id || '').slice(0, 8) || '?'} _pid=${data._pid} _timestamp=${data._timestamp}`);
 
-        // P1-3: Validate JSON schema
+        // Validate JSON schema
         const isValid = validateHook(data);
         if (!isValid) {
           debugLog(`[Hook] Validation FAILED for ${data.hook_event_name}: ${JSON.stringify(validateHook.errors)}`);

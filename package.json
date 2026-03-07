@@ -10,7 +10,11 @@
     "test": "jest",
     "test:coverage": "jest --coverage",
     "test:watch": "jest --watch",
-    "dashboard": "node src/dashboard-server.js"
+    "dashboard": "node src/dashboard-server.js",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux"
   },
   "keywords": [
     "electron",
@@ -21,9 +25,68 @@
   ],
   "author": "geunilbae",
   "license": "MIT",
+  "build": {
+    "appId": "com.geunilbae.pixel-agent-desk",
+    "productName": "Pixel Agent Desk",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/**/*",
+      "public/**/*",
+      "styles.css",
+      "index.html",
+      "dashboard.html",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "public/icon.ico"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "icon": "public/icon.icns",
+      "category": "public.app-category.developer-tools"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "public/icon.png",
+      "category": "Development"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "public/icon.ico",
+      "uninstallerIcon": "public/icon.ico"
+    }
+  },
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "electron": "^32.0.0",
+    "electron-builder": "^25.1.0",
     "jest": "^30.2.0"
   },
   "dependencies": {

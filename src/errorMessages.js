@@ -1,5 +1,5 @@
 /**
- * P0-3: Error Recovery System - User-Friendly Messages
+ * User-Friendly Error Messages
  * Convert technical errors into user-friendly messages
  */
 

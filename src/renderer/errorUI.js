@@ -1,5 +1,5 @@
 /**
- * Error UI — P0-3: Error Recovery UI
+ * Error UI
  */
 
 const errorQueue = [];

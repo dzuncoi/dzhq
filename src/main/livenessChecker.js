@@ -168,25 +168,26 @@ function zombieSweep(agentManager, debugLog) {
   });
 }
 
-function startLivenessChecker({ agentManager, debugLog }) {
-  const INTERVAL = 2000;   // 2 seconds
-  const GRACE_MS = 10000;  // 10-second grace period after registration
+const LIVENESS_INTERVAL = 2000;
+const GRACE_MS = 10000;
+const ZOMBIE_SWEEP_INTERVAL = 30000;
+const NO_PID_TIMEOUT = GRACE_MS + 10000;
 
-  // Zombie sweep: every 30 seconds, compare process count vs agent count
+function startLivenessChecker({ agentManager, debugLog }) {
   setInterval(() => {
     if (agentManager) zombieSweep(agentManager, debugLog);
-  }, 30000);
+  }, ZOMBIE_SWEEP_INTERVAL);
 
   setInterval(async () => {
     if (!agentManager) return;
     for (const agent of agentManager.getAllAgents()) {
-      if (agent.firstSeen && Date.now() - agent.firstSeen < GRACE_MS) continue;
+      if (agent.firstSeen && (Date.now() - agent.firstSeen) < GRACE_MS) continue;
 
       const pid = sessionPids.get(agent.id);
       if (!pid) {
         retryPidDetection(agent.id, agentManager, debugLog);
         const noPidAge = Date.now() - (agent.firstSeen || 0);
-        if (noPidAge > GRACE_MS + 10000) {
+        if (noPidAge > NO_PID_TIMEOUT) {
           // Solo agent protection: don't remove the only agent
           if (agentManager.getAgentCount() <= 1) {
             debugLog(`[Live] ${agent.id.slice(0, 8)} no PID but solo agent → keeping`);
@@ -229,7 +230,7 @@ function startLivenessChecker({ agentManager, debugLog }) {
         agentManager.removeAgent(agent.id);
       }
     }
-  }, INTERVAL);
+  }, LIVENESS_INTERVAL);
 }
 
 module.exports = { sessionPids, startLivenessChecker, detectClaudePidByTranscript };

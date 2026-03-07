@@ -8,7 +8,7 @@ function formatTime(ms) {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
-// P1-5: Prevent listener accumulation — remove existing handlers before registering
+// Prevent listener accumulation — remove existing handlers before registering
 function safeOn(channel, callback) {
   ipcRenderer.removeAllListeners(channel);
   ipcRenderer.on(channel, (event, data) => callback(data));
@@ -25,7 +25,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onAgentRemoved: (cb) => safeOn('agent-removed', cb),
   onAgentsCleaned: (cb) => safeOn('agents-cleaned', cb),
 
-  // Error events (P0-3: Error Recovery)
+  // Error events
   onErrorOccurred: (cb) => safeOn('error-occurred', cb),
 
   // Agent queries
@@ -44,6 +44,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Mission Control Dashboard methods
   openWebDashboard: () => ipcRenderer.invoke('open-web-dashboard'),
 
-  // Error Recovery methods (P0-3)
+  // Error Recovery methods
   executeRecoveryAction: (errorId, action) => ipcRenderer.invoke('execute-recovery-action', errorId, action)
 });
