@@ -15,16 +15,16 @@ Electron app that visualizes Claude Code CLI status as pixel avatars. Pure JS, C
 ## Architecture
 
 ```
-Claude CLI ──HTTP hook──▶ POST(:47821) ──▶ hookProcessor
-                                              │
-                                    ┌─────────┤
-                                    ▼         ▼
-                              agentManager  agent-desk-server(:3000)
-                                  │              │
-                                  ▼         ┌───┴──────────┐
-                            renderer/*      ▼              ▼
-                          (pixel avatar) dashboard.html  pip.html
-                                         (agent desk)  (PiP floating)
+Claude CLI ──stdin──▶ hook.js ──HTTP──▶ POST(:47821) ──▶ hookProcessor
+                                                              │
+                                                    ┌─────────┤
+                                                    ▼         ▼
+                                              agentManager  agent-desk-server(:3000)
+                                                  │              │
+                                                  ▼         ┌───┴──────────┐
+                                            renderer/*      ▼              ▼
+                                          (pixel avatar) dashboard.html  pip.html
+                                                         (agent desk)  (PiP floating)
 ```
 
 ### Key Modules
@@ -32,9 +32,10 @@ Claude CLI ──HTTP hook──▶ POST(:47821) ──▶ hookProcessor
 | Module | File | Role |
 |--------|------|------|
 | Main | `src/main.js` | Module init, event wiring, app lifecycle |
+| Hook Forwarder | `src/hook.js` | stdin → HTTP :47821 (Claude CLI spawns this per event) |
 | Hook Server | `src/main/hookServer.js` | HTTP :47821, AJV schema validation |
-| Hook Processor | `src/main/hookProcessor.js` | Event switch + state mapping |
-| Hook Registration | `src/main/hookRegistration.js` | Claude CLI hook auto-registration |
+| Hook Processor | `src/main/hookProcessor.js` | Event switch + state mapping (all hook event types) |
+| Hook Registration | `src/main/hookRegistration.js` | Claude CLI hook auto-registration (~18 event types) |
 | Liveness Checker | `src/main/livenessChecker.js` | PID detection, zombie sweep (2s/30s) |
 | Window Manager | `src/main/windowManager.js` | Electron window lifecycle, dashboard/PiP server |
 | IPC Handlers | `src/main/ipcHandlers.js` | IPC channel handlers, terminal focus, PiP toggle |
@@ -56,14 +57,33 @@ Claude CLI ──HTTP hook──▶ POST(:47821) ──▶ hookProcessor
 
 ```
 SessionStart hook → agent created (Waiting) → 10s grace period
+  (or any first hook event → auto-create fallback if SessionStart was missed)
                          │
-         Hook events drive state: Waiting → Thinking → Working → Done
+         Hook events drive state transitions:
+           UserPromptSubmit  → Thinking
+           PreToolUse        → Working  (first PreToolUse after SessionStart ignored)
+           PostToolUse       → Thinking (+ token usage update)
+           PostToolUseFailure→ Error
+           PermissionRequest → Help
+           Notification      → Help  (permission_prompt / elicitation_dialog only)
+           Stop/TaskCompleted→ Done
+           PreCompact        → Thinking (grace period extended)
                          │
          Removal (automatic only, no manual dismiss):
            1. SessionEnd hook → immediate removal
            2. PID dead + transcript re-check fails → removal
            3. Zombie sweep: process count < agent count → oldest removed
 ```
+
+**State debounce:** Working→Thinking transitions are delayed 500ms to prevent flickering. If Working is re-entered within that window, the pending Thinking emit is cancelled.
+
+### Subagent / Teammate Avatars
+
+- **SubagentStart** hook → creates a child agent (`isSubagent: true`, `parentId` set)
+- **SubagentStop** hook → removes the child agent
+- **TeammateIdle** hook → creates/updates an agent with `isTeammate: true`, `teammateName`, `teamName`
+- **Satellite rendering**: subagents and teammates with a known `parentId` are rendered as mini avatars (50% scale) inside the parent card's `.satellite-tray`, not as standalone grid cards. If the parent card arrives after the child, the child is migrated from standalone → satellite automatically.
+- **Parent state aggregation** (`getAgentWithEffectiveState`): while the parent's own state is Waiting/Done, if any child is Working/Thinking the parent displays as Working; if any child is Help/Error the parent displays as Help.
 
 ### Sprite Sheet Format
 
