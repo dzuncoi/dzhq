@@ -167,6 +167,15 @@ function registerIpcHandlers({ agentManager, sessionPids, windowManager, debugLo
       return { success: false, error: error.message };
     }
   });
+
+  ipcMain.on('pip-close', () => {
+    windowManager.closePipWindow();
+  });
+
+  ipcMain.on('pip-back-to-dashboard', () => {
+    windowManager.closePipWindow();
+    windowManager.focusDashboardWindow();
+  });
 }
 
 module.exports = { registerIpcHandlers };

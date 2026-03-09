@@ -179,7 +179,13 @@ function createWindowManager({ agentManager, sessionScanner, heatmapScanner, deb
     }
   }
 
-  // ─── PiP Window (Step 1: basic frame:true prototype) ───
+  function notifyDashboardPipState(isOpen) {
+    if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+      dashboardWindow.webContents.send('pip-state-changed', isOpen);
+    }
+  }
+
+  // ─── PiP Window ───
   function createPipWindow() {
     if (pipWindow && !pipWindow.isDestroyed()) {
       pipWindow.focus();
@@ -205,15 +211,20 @@ function createWindowManager({ agentManager, sessionScanner, heatmapScanner, deb
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
-        sandbox: false
+        sandbox: false,
+        preload: path.join(__dirname, '..', 'pipPreload.js')
       }
     });
+
+    // Office map is 864x800 → aspect ratio 1.08
+    pipWindow.setAspectRatio(864 / 800);
 
     pipWindow.once('ready-to-show', () => {
       if (!pipWindow || pipWindow.isDestroyed()) return;
       pipWindow.show();
       pipWindow.setAlwaysOnTop(true, 'floating');
-      debugLog('[PiP] Window shown with title bar');
+      notifyDashboardPipState(true);
+      debugLog('[PiP] Window shown');
     });
 
     pipWindow.loadURL('http://localhost:3000/pip');
@@ -226,10 +237,11 @@ function createWindowManager({ agentManager, sessionScanner, heatmapScanner, deb
 
     pipWindow.on('closed', () => {
       pipWindow = null;
+      notifyDashboardPipState(false);
       debugLog('[PiP] Window closed');
     });
 
-    debugLog('[PiP] Window created (frame:true prototype)');
+    debugLog('[PiP] Window created');
   }
 
   function closePipWindow() {
@@ -237,6 +249,13 @@ function createWindowManager({ agentManager, sessionScanner, heatmapScanner, deb
       pipWindow.close();
     }
     pipWindow = null;
+  }
+
+  function focusDashboardWindow() {
+    if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+      if (dashboardWindow.isMinimized()) dashboardWindow.restore();
+      dashboardWindow.focus();
+    }
   }
 
   function closeDashboardWindow() {
@@ -302,6 +321,7 @@ function createWindowManager({ agentManager, sessionScanner, heatmapScanner, deb
     closeDashboardWindow,
     createPipWindow,
     closePipWindow,
+    focusDashboardWindow,
     startDashboardServer,
     stopDashboardServer,
     resizeWindowForAgents,

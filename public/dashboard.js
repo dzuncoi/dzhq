@@ -603,14 +603,39 @@ document.querySelectorAll('.nav-item').forEach(b => {
   };
 });
 
-// ─── PiP TOGGLE ───
+// ─── PiP TOGGLE & STATE ───
 (function () {
   var pipBtn = document.getElementById('pipToggleBtn');
+  var pipPlaceholder = document.getElementById('pipPlaceholder');
+  var pipStopBtn = document.getElementById('pipStopBtn');
+  var officeCanvas = document.getElementById('office-canvas');
+
+  function setPipState(isOpen) {
+    if (pipBtn) pipBtn.classList.toggle('active', isOpen);
+    if (pipPlaceholder) pipPlaceholder.style.display = isOpen ? 'flex' : 'none';
+    if (officeCanvas) officeCanvas.style.display = isOpen ? 'none' : 'block';
+  }
+
   if (pipBtn) {
     pipBtn.addEventListener('click', function () {
       if (typeof dashboardAPI !== 'undefined' && dashboardAPI.togglePip) {
         dashboardAPI.togglePip();
       }
+    });
+  }
+
+  if (pipStopBtn) {
+    pipStopBtn.addEventListener('click', function () {
+      if (typeof dashboardAPI !== 'undefined' && dashboardAPI.togglePip) {
+        dashboardAPI.togglePip();
+      }
+    });
+  }
+
+  // Listen for PiP state changes from main process
+  if (typeof dashboardAPI !== 'undefined' && dashboardAPI.onPipStateChanged) {
+    dashboardAPI.onPipStateChanged(function (isOpen) {
+      setPipState(isOpen);
     });
   }
 })();
