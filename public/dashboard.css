@@ -173,6 +173,19 @@ body {
   color: var(--color-text-muted);
 }
 
+.github-link {
+  margin-left: auto;
+  color: var(--color-text-muted);
+  opacity: 0.6;
+  transition: opacity 0.2s;
+  display: flex;
+  align-items: center;
+}
+
+.github-link:hover {
+  opacity: 1;
+}
+
 .status-dot {
   width: 8px;
   height: 8px;
