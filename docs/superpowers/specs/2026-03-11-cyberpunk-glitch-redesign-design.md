@@ -28,6 +28,7 @@ Redesign the entire DzHQ app (formerly Pixel Agent Desk) using a **Cyberpunk Gli
 - **Logo treatment:** `DZ` in cyan (`#00ffff`) + `HQ` in magenta (`#ff00ff`), both with neon glow
 - **Animation:** Periodic RGB glitch on the logo (CSS keyframe, fires every ~6s, subtle)
 - **Font:** Orbitron 900
+- **Title tag update:** Both `index.html` and `dashboard.html` `<title>` must be changed from "Pixel Agent Desk" to "DzHQ"
 
 ---
 
@@ -52,7 +53,7 @@ Redesign the entire DzHQ app (formerly Pixel Agent Desk) using a **Cyberpunk Gli
 | `--neon-cyan-dim` | `#00cccc` | Dimmed cyan for secondary elements |
 | `--neon-magenta` | `#ff00ff` | Glitch accent — logo "HQ", cost numbers, error emphasis |
 | `--neon-magenta-dim` | `#cc00cc` | Dimmed magenta |
-| `--neon-green` | `#00ff41` | Alternative accent (matrix green), used sparingly |
+| `--neon-green` | `#22c55e` | Connection status dot, "LIVE" stage label, "GATEWAY CONNECTED" footer badge |
 
 ### Borders
 
@@ -74,14 +75,16 @@ Redesign the entire DzHQ app (formerly Pixel Agent Desk) using a **Cyberpunk Gli
 ### Agent State Colors (unchanged)
 
 These are preserved exactly from the current codebase — users have existing color associations.
+The translucent tint treatment (see Type Tag section) applies to **all** state selectors used in the codebase:
+`working`, `thinking`, `waiting`, `reporting`, `complete`, `idle`, `alert`, `help`, `error`, `offline`.
 
 | State | Hex | Usage |
 |---|---|---|
 | `working` | `#f97316` | Orange — active execution |
 | `thinking` | `#8b5cf6` | Violet — LLM reasoning (pulsing animation) |
 | `waiting` | `#94a3b8` | Slate — idle/waiting |
-| `reporting` / `done` | `#22c55e` | Green — completed |
-| `help` / `error` | `#ef4444` | Red — needs attention |
+| `reporting` / `complete` | `#22c55e` | Green — completed (covers both `data-state="reporting"` and `data-state="complete"` / `.state-complete`) |
+| `help` / `error` / `alert` | `#ef4444` | Red — needs attention |
 | `offline` | `#475569` | Dark slate — disconnected |
 
 ---
@@ -98,7 +101,24 @@ These are preserved exactly from the current codebase — users have existing co
 | Secondary | JetBrains Mono | 400 | 8–9px | — | Descriptions, timestamps |
 | Labels | JetBrains Mono | 400 | 7–8px | ALL CAPS | Table headers, small tags |
 
-**Font loading:** Orbitron is added for display use only. JetBrains Mono is already loaded in `styles.css` — no additional load for UI text.
+### Font Loading Changes
+
+**`styles.css`:**
+- Remove the existing Pretendard CDN `@import` (line 1)
+- Remove the Press Start 2P Google Fonts `@import`
+- Remove the `--font-display` and `--font-ui` CSS variables
+- Add Orbitron to the existing JetBrains Mono Google Fonts import:
+  ```css
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Orbitron:wght@700;900&display=swap');
+  ```
+- Add `--font-display: 'Orbitron', monospace;` and keep `--font-body: 'JetBrains Mono', monospace;`
+
+**`dashboard.html`:**
+- Update the existing Google Fonts `<link>` to include Orbitron:
+  ```html
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+  ```
+- Remove the separate Inter font link (Inter is replaced by JetBrains Mono throughout)
 
 ---
 
@@ -120,6 +140,10 @@ Fires periodically (~every 6s). Brief, subtle. Not used on data.
   91% { transform: translate(-2px, 0); clip-path: polygon(0 25%, 100% 25%, 100% 45%, 0 45%); color: #ff00ff; }
   93% { transform: translate(2px, 0); clip-path: polygon(0 60%, 100% 60%, 100% 75%, 0 75%); color: #00ff41; }
   95% { transform: translate(0); clip-path: none; color: #00ffff; }
+}
+/* Disable for prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .logo { animation: none; }
 }
 ```
 
@@ -148,9 +172,10 @@ background-image:
 background-size: 28px 28px;
 ```
 
-### State Pulse Animations (existing, rethemed)
-- Thinking: violet pulse `rgba(139, 92, 246, 0.5)` — unchanged behavior, new context
-- Working: orange pulse `rgba(249, 115, 22, 0.5)` — unchanged behavior, new context
+### State Pulse Animations (existing, rethemed context)
+- Thinking: violet pulse `rgba(139, 92, 246, 0.5)` — unchanged behavior
+- Working: orange pulse `rgba(249, 115, 22, 0.5)` — unchanged behavior
+- Both must be disabled under `prefers-reduced-motion`
 
 ---
 
@@ -233,6 +258,9 @@ The overlay window remains transparent. Only visual treatment of child component
 | Font | Pretendard/UI sans | JetBrains Mono 700 |
 
 ### Type Tag (state badge above bubble)
+
+Applies to all state variants used in the codebase: `.agent-card[data-state="working"]`, `thinking`, `waiting`, `reporting`, `complete`, `idle`, `alert`, `help`, `error`, `offline`.
+
 | Property | Old | New |
 |---|---|---|
 | Background | Solid state color | `<state-color>22` (10% opacity tint) |
@@ -240,6 +268,19 @@ The overlay window remains transparent. Only visual treatment of child component
 | Text | White | State color |
 | Font | Pretendard | JetBrains Mono 700 |
 | Border radius | `3px` | `2px` |
+
+### Avatar Toolbar / Dashboard Button (`.web-dashboard-btn`)
+| Property | Old | New |
+|---|---|---|
+| Background | `rgba(255,255,255,0.92)` | `#060c14` |
+| Border | `1px solid rgba(0,0,0,0.12)` | `1px solid #00ffff22` |
+| Text color | `#333` | `#8b9ec7` |
+| Font | Pretendard | JetBrains Mono 600 |
+| Hover background | `#2196f3` | `#00ffff11` |
+| Hover text color | `#fff` | `#00ffff` |
+| Hover border | `#1976d2` | `#00ffff66` |
+| Hover box-shadow | Blue shadow | `0 0 10px #00ffff33` |
+| Focus outline | `2px solid #2196f3` | `2px solid #00ffff` |
 
 ### Terminal Focus Button (`>_`)
 | Property | Old | New |
@@ -264,10 +305,10 @@ The overlay window remains transparent. Only visual treatment of child component
 | Border | `1px solid rgba(255,255,255,0.1)` | `1px solid #00ffff22` |
 | Border radius | `12px` | `8px` |
 | Box shadow | Dark only | Dark + `0 0 0 1px #00ffff08` outer cyan glow |
-| Icons | Text/emoji | SVG (Lucide), `#00ffff88` tint |
+| Icons | Text/emoji | SVG (Lucide), inline in HTML, `#00ffff88` stroke tint |
 | Item hover bg | `rgba(255,255,255,0.1)` | `#00ffff08` |
 | Item hover color | Unchanged | `#00ffff` |
-| Danger row | `#ff6b6b` | `#ef4444` (unchanged value, existing color token) |
+| Danger row | `#ff6b6b` | `#ef4444` |
 | Separator | `rgba(255,255,255,0.1)` | `#00ffff0d` |
 | Font | System UI sans | JetBrains Mono 400 12px |
 
@@ -284,27 +325,63 @@ The overlay window remains transparent. Only visual treatment of child component
 | Title font | System sans | JetBrains Mono 700 11px |
 | Body font | System sans | JetBrains Mono 400 9px |
 | Primary action | `#2196f3` blue | Severity color (red for errors) |
-| Secondary action | Gray | Cyan ghost button |
+| Secondary action | Gray | Cyan ghost button (`#00ffff11` bg, `#00ffff22` border) |
+
+---
+
+## Dashboard Additional Components
+
+These components in `public/dashboard.css` are included in the full retheme:
+
+### Disconnect Banner (`.disconnect-banner`)
+- Background: `#030c18` (was red-dim)
+- Border-bottom: `1px solid #ef444433`
+- Text: `#ef4444`
+- Icon: SVG warning, `#ef4444`
+
+### Office Popover (`.office-popover`) and Tooltip (`.mc-tooltip`)
+- Background: `#060c14` (was `rgba(21,25,28,0.95)`)
+- Border: `1px solid #00ffff22`
+- Box shadow: `0 4px 20px rgba(0,0,0,.6), 0 0 0 1px #00ffff08`
+- Font: JetBrains Mono (replace Inter)
+- All `--color-border` and `--color-primary` usages replaced with `#00ffff` tokens
+
+### PiP Toggle Button (`.pip-toggle-btn`)
+- Border: `1px solid #00ffff22`
+- Background: `#060c14`
+- Hover border: `#00ffff66`
+- Hover box-shadow: `0 0 8px #00ffff33`
+- Active/toggled state: `#00ffff11` background + `#00ffff44` border
 
 ---
 
 ## Icon System
 
-All icons use **Lucide** SVG icons (already available). No emoji used in UI.
+Icons are **inline SVG** sourced from [lucide.dev](https://lucide.dev). No npm package required — copy the SVG `<path>` for each icon used. No emoji used in UI.
 
-- Icon color: `#00ffff88` (muted cyan) by default
-- Active/hover: `#00ffff`
+- Default stroke color: `#00ffff88`
+- Active/hover stroke: `#00ffff`
 - Danger context: `#ef4444`
-- Size: `14×14px` standard, `16×16px` for primary actions
+- Standard size: `14×14px` (`width="14" height="14" viewBox="0 0 24 24"`)
+- Primary action size: `16×16px`
 
 ---
 
-## Accessibility Notes
+## Accessibility
 
 - All neon text on dark panels maintains ≥4.5:1 contrast ratio (`#00ffff` on `#030408` = 14.7:1)
 - State colors retain their existing WCAG compliance
-- `prefers-reduced-motion`: glitch animation and pulse animations must be disabled
-- Focus states: `outline: 2px solid #00ffff; outline-offset: 2px` replaces current purple outline
+- **`prefers-reduced-motion`:** glitch animation, pulse animations, and entrance animations must all be disabled:
+  ```css
+  @media (prefers-reduced-motion: reduce) {
+    .logo, .agent-bubble, .mini-avatar { animation: none; }
+  }
+  ```
+- **Focus outlines:** All purple (`#6200ea`) and blue (`#2196f3`) focus outlines across the codebase replaced with `outline: 2px solid #00ffff; outline-offset: 2px`. This covers:
+  - `.agent-card:focus-visible` (including the blue background tint → cyan tint: `rgba(0,255,255,0.05)`)
+  - `.context-menu-item:focus`
+  - `.error-toast:focus-visible`, `.error-action-btn:focus-visible`, `.error-close:focus-visible`
+  - `.web-dashboard-btn:focus-visible`
 - Keyboard navigation: tab order unchanged
 
 ---
@@ -313,11 +390,11 @@ All icons use **Lucide** SVG icons (already available). No emoji used in UI.
 
 | File | Changes |
 |---|---|
-| `styles.css` | Full retheme — all CSS custom properties, component styles |
-| `index.html` | App title update to "DzHQ" |
-| `dashboard.html` | Layout restructure (sidebar → top nav + KPI strip), component retheme |
-| `public/dashboard.css` | Full retheme matching new design system |
-| `src/office/office-config.js` | `STATE_COLORS` values — kept unchanged |
+| `styles.css` | Full retheme — remove Pretendard + Press Start 2P imports, add Orbitron, replace all component styles with cyberpunk tokens |
+| `index.html` | `<title>` → "DzHQ" |
+| `dashboard.html` | `<title>` → "DzHQ"; update Google Fonts link (add Orbitron, remove Inter); layout restructure (sidebar → top nav + KPI strip + right panel + footer) |
+| `public/dashboard.css` | Full retheme — all component styles including popover, tooltip, disconnect banner, PiP button |
+| `src/office/office-config.js` | `STATE_COLORS` — kept unchanged |
 
 ---
 
