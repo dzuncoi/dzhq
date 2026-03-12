@@ -16,6 +16,7 @@
     "format": "prettier --write \"src/**/*.js\" \"__tests__/**/*.js\"",
     "format:check": "prettier --check \"src/**/*.js\" \"__tests__/**/*.js\"",
     "dist": "electron-builder",
+    "build": "electron-builder --mac",
     "dist:win": "electron-builder --win",
     "dist:mac": "electron-builder --mac",
     "dist:linux": "electron-builder --linux"
@@ -35,8 +36,9 @@
   },
   "license": "MIT",
   "build": {
-    "appId": "com.mgpixelart.pixel-agent-desk",
-    "productName": "Pixel Agent Desk",
+    "appId": "com.mgpixelart.dzhq",
+    "productName": "DzHQ",
+    "icon": "build/icon",
     "directories": {
       "output": "release"
     },
@@ -52,11 +54,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
@@ -64,7 +70,10 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "category": "public.app-category.developer-tools"
@@ -73,11 +82,15 @@
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "deb",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "category": "Development"
