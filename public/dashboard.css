@@ -290,13 +290,17 @@ body {
 }
 
 .disconnect-banner {
-  background: var(--color-error-dim);
-  border-bottom: 1px solid var(--color-error);
-  color: #ff7b72;
+  background: rgba(239,68,68,0.08);
+  border-bottom: 1px solid rgba(239,68,68,0.3);
+  color: #ef4444;
   text-align: center;
-  padding: 8px;
-  font-size: 0.8rem;
-  font-weight: 500;
+  padding: 6px 16px;
+  font-family: var(--font-ui);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  flex-shrink: 0;
 }
 
 .scroll-container {
@@ -844,19 +848,21 @@ body {
 /* Tooltip */
 .mc-tooltip {
   position: fixed;
-  background: rgba(21, 25, 28, 0.95);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--color-border);
+  background: var(--bg-surface-2);
+  border: 1px solid #00ffff22;
   border-radius: var(--radius-sm);
-  padding: 12px;
-  color: #fff;
-  font-size: 0.75rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,.5);
+  padding: 5px 10px;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  color: var(--text-primary);
   pointer-events: none;
   z-index: 9999;
   display: none;
-  box-shadow: var(--shadow-md);
-  min-width: 200px;
+  white-space: nowrap;
 }
+
+.mc-tooltip.visible { display: block; }
 
 .mc-tooltip .tt-head {
   color: var(--color-text-muted);
@@ -987,20 +993,21 @@ body {
 /* ─── Office Popover ─── */
 .office-popover {
   position: fixed;
-  z-index: 10000;
-  background: rgba(21, 25, 28, 0.95);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--color-border);
+  background: var(--bg-surface-1);
+  border: 1px solid #00ffff22;
   border-radius: var(--radius-md);
-  padding: 16px;
-  color: #fff;
-  font-size: 0.78rem;
-  box-shadow: var(--shadow-md);
-  min-width: 240px;
-  max-width: 320px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.6), 0 0 0 1px #00ffff08;
+  padding: 10px 14px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-primary);
+  pointer-events: none;
+  z-index: 5000;
   display: none;
-  pointer-events: auto;
+  min-width: 140px;
 }
+
+.office-popover.visible { display: block; }
 
 .office-popover .pop-header {
   display: flex;
