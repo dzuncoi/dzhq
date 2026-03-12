@@ -566,9 +566,39 @@ body {
 
 .standby-state {
   text-align: center;
-  color: var(--color-text-dark);
-  margin-top: 40px;
-  font-size: 0.8rem;
+  padding: 20px 10px;
+  color: var(--text-disabled);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+/* Individual agent row in roster */
+.agent-roster-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid #00ffff06;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.agent-roster-item:last-child { border-bottom: none; }
+
+.agent-roster-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+.agent-roster-name { flex: 1; color: var(--text-primary); }
+
+.agent-roster-state {
+  font-size: 7px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-weight: 700;
 }
 
 /* Modern Agent Card */
@@ -728,15 +758,23 @@ body {
 }
 
 /* ─── Heatmap / History ─── */
-.heatmap-panel {
-  padding: 24px;
-}
+.heatmap-panel { }  /* inherits from .panel */
 
 .heatmap-header {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-subtle);
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: 24px;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.heatmap-header h2 {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--text-primary);
+  text-transform: uppercase;
 }
 
 .heatmap-stats-row {
@@ -792,35 +830,16 @@ body {
 }
 
 .hm-cell {
-  width: 14px;
-  height: 14px;
-  border-radius: 3px;
-  cursor: crosshair;
-  background: #161b22;
-  outline: 1px solid rgba(255, 255, 255, 0.02);
-  outline-offset: -1px;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--bg-surface-2);
 }
 
-.hm-cell:hover {
-  outline: 1px solid var(--color-text-muted);
-  z-index: 2;
-}
-
-.hm-cell.l1 {
-  background: #0e4429;
-}
-
-.hm-cell.l2 {
-  background: #006d32;
-}
-
-.hm-cell.l3 {
-  background: #26a641;
-}
-
-.hm-cell.l4 {
-  background: #39d353;
-}
+.hm-cell.l1 { background: rgba(0,255,255,0.15); }
+.hm-cell.l2 { background: rgba(0,255,255,0.35); }
+.hm-cell.l3 { background: rgba(0,255,255,0.6); }
+.hm-cell.l4 { background: #00ffff; box-shadow: 0 0 4px #00ffff88; }
 
 /* Tooltip */
 .mc-tooltip {
@@ -862,24 +881,31 @@ body {
 /* ─── Usage Charts ─── */
 .usage-controls {
   display: flex;
-  gap: 8px;
-  margin-bottom: 24px;
+  gap: 4px;
+  margin-bottom: 12px;
 }
 
 .usage-btn {
-  background: transparent;
-  border: 1px solid var(--color-border);
-  color: var(--color-text-muted);
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 0.75rem;
+  font-family: var(--font-ui);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border-radius: 3px;
+  border: 1px solid transparent;
   cursor: pointer;
+  background: transparent;
+  color: var(--text-muted);
+  transition: all 0.15s;
 }
 
+.usage-btn:hover { color: #00ffff88; background: #00ffff06; }
+
 .usage-btn.active {
-  background: var(--color-text);
-  color: var(--color-bg);
-  font-weight: 600;
+  color: #00ffff;
+  border-color: #00ffff44;
+  background: #00ffff0e;
 }
 
 .chart-box {
