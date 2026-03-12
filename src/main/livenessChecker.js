@@ -181,6 +181,7 @@ function startLivenessChecker({ agentManager, debugLog }) {
   const livenessCheckId = setInterval(async () => {
     if (!agentManager) return;
     for (const agent of agentManager.getAllAgents()) {
+      if (agent.isSubagent) continue; // sub-agents have no PID; managed by SubagentStop hook
       if (agent.firstSeen && (Date.now() - agent.firstSeen) < GRACE_MS) continue;
 
       const pid = sessionPids.get(agent.id);
