@@ -69,35 +69,14 @@
       Network disconnected. Attempting to restore websocket connection...
     </div>
 
-    <!-- Main Content Wrapper -->
+    <!-- Dash Body (stage + right panel) -->
+    <div class="dash-body">
     <main class="main-area">
 
       <div class="scroll-container">
 
         <!-- =================== OVERVIEW VIEW =================== -->
         <div id="officeView" class="view-section active">
-
-          <!-- KPIs -->
-          <div class="kpi-grid">
-            <div class="panel kpi-card">
-              <div class="kpi-title">Active Agents</div>
-              <div class="kpi-value blue" id="kpiActiveAgents">0 <span
-                  style="font-size:0.8rem;color:var(--color-text-dark)">/ <span id="kpiTotalAgents_panel">0</span></span>
-              </div>
-            </div>
-            <div class="kpi-card panel">
-              <div class="kpi-title">Token Burn (Session)</div>
-              <div class="kpi-value purple" id="kpiTokens_panel">0</div>
-            </div>
-            <div class="kpi-card panel">
-              <div class="kpi-title">Est. Cost Lifecycle</div>
-              <div class="kpi-value" id="kpiCost_panel">$0.00</div>
-            </div>
-            <div class="kpi-card panel">
-              <div class="kpi-title">Errors (24h)</div>
-              <div class="kpi-value green" id="kpiErrors">0</div>
-            </div>
-          </div>
 
           <!-- Office & Agents Panel Layout -->
           <div class="office-layout">
@@ -120,19 +99,6 @@
                   </svg>
                   <div class="pip-placeholder-text">Playing in PiP mode</div>
                   <button class="pip-placeholder-btn" id="pipStopBtn">Close PiP and view here</button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Agent List -->
-            <div class="panel agent-roster-panel">
-              <div class="panel-header">
-                System Roster
-              </div>
-              <div class="panel-body" id="agentPanel">
-                <div class="standby-state" id="standbyMessage">
-                  <div>No agents dispatched.</div>
-                  <div style="font-size:0.7rem; margin-top:6px;">Spawn an agent via CLI to populate roster.</div>
                 </div>
               </div>
             </div>
@@ -215,6 +181,62 @@
 
       </div>
     </main>
+
+      <!-- Right Data Panel -->
+      <aside class="right-panel">
+        <div class="rp-section">
+          <div class="rp-header">AGENTS</div>
+          <div class="rp-body" id="agentPanel">
+            <div class="rp-empty" id="standbyMessage">No agents</div>
+          </div>
+        </div>
+        <div class="rp-section">
+          <div class="rp-header">TOKEN USAGE</div>
+          <div class="rp-body">
+            <div class="rp-row">
+              <span class="rp-key">Session</span>
+              <span class="rp-val rp-cyan" id="rpTokens">0</span>
+            </div>
+            <div class="rp-row">
+              <span class="rp-key">Input</span>
+              <span class="rp-val" id="rpInputTokens">0</span>
+            </div>
+            <div class="rp-row">
+              <span class="rp-key">Output</span>
+              <span class="rp-val" id="rpOutputTokens">0</span>
+            </div>
+          </div>
+        </div>
+        <div class="rp-section">
+          <div class="rp-header">COST</div>
+          <div class="rp-body">
+            <div class="rp-row">
+              <span class="rp-key">Session</span>
+              <span class="rp-val rp-magenta" id="rpCost">$0.00</span>
+            </div>
+          </div>
+        </div>
+        <div class="rp-section">
+          <div class="rp-header">MODEL</div>
+          <div class="rp-body">
+            <div class="rp-row">
+              <span class="rp-key">Active</span>
+              <span class="rp-val rp-cyan" id="rpModel">—</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Footer -->
+    <footer class="dash-footer">
+      <div class="footer-item">
+        <span class="status-dot footer-dot" id="footerStatusDot"></span>
+        <span id="footerStatusText">Connecting...</span>
+      </div>
+      <div class="footer-item footer-sep">ws://localhost:3200</div>
+      <div class="footer-item footer-right">DzHQ v2.0.0</div>
+    </footer>
   </div>
 
   <!-- Global Tooltip -->
