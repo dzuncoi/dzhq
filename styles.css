@@ -368,14 +368,13 @@ html {
 .agent-bubble {
   font-family: var(--font-body);
   font-size: 11px;
-  font-weight: 700;
-  background: rgba(255, 255, 255, 0.97);
-  border: 2px solid #94a3b8;
-  /* Default: slate (Waiting) — unified palette */
-  border-radius: 6px;
+  font-weight: 600;
+  background: #060c14;
+  border: 1.5px solid #94a3b8;
+  border-radius: 5px;
   padding: 3px 8px;
   text-align: center;
-  color: #333;
+  color: #94a3b8;
   white-space: nowrap;
   line-height: 1.3;
   width: 72px;
@@ -385,11 +384,12 @@ html {
   text-overflow: ellipsis;
   position: relative;
   -webkit-app-region: drag;
-  /* Speech bubble can now be grabbed to move the window */
   pointer-events: auto;
-  /* Required for drag and click detection */
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
-  /* Smooth color transition on state change */
+  background-image: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px
+  );
 }
 
 /* Timer display element — toggle via visibility to keep height fixed */
@@ -422,32 +422,64 @@ html {
    offline:  #475569  (slate-600)
 */
 
-/* Per-state colors */
+/* working */
 .agent-bubble.is-working,
-.agent-card.state-working .agent-bubble {
+.agent-card.state-working .agent-bubble,
+.agent-card[data-state="working"] .agent-bubble {
   border-color: #f97316;
+  color: #f97316;
+  box-shadow: 0 0 8px rgba(249,115,22,0.3), inset 0 0 12px rgba(249,115,22,0.05);
 }
 
+/* waiting */
 .agent-bubble.is-waiting,
-.agent-card.state-waiting .agent-bubble {
+.agent-card.state-waiting .agent-bubble,
+.agent-card[data-state="waiting"] .agent-bubble {
   border-color: #94a3b8;
-}
-
-.agent-bubble.is-complete,
-.agent-card.state-complete .agent-bubble {
-  border-color: #22c55e;
-}
-
-.agent-bubble.is-alert,
-.agent-card.state-alert .agent-bubble {
-  border-color: #ef4444;
-  color: #b91c1c;
-}
-
-.agent-bubble.is-offline,
-.agent-card.state-offline .agent-bubble {
-  border-color: #475569;
   color: #94a3b8;
+}
+
+/* idle — same as waiting */
+.agent-card[data-state="idle"] .agent-bubble {
+  border-color: #94a3b8;
+  color: #94a3b8;
+}
+
+/* thinking */
+.agent-card[data-state="thinking"] .agent-bubble {
+  border-color: #8b5cf6;
+  color: #8b5cf6;
+  box-shadow: 0 0 8px rgba(139,92,246,0.3), inset 0 0 12px rgba(139,92,246,0.05);
+  animation: bubble-pulse-violet 1s ease-in-out infinite;
+}
+
+/* reporting / complete */
+.agent-bubble.is-complete,
+.agent-card.state-complete .agent-bubble,
+.agent-card[data-state="reporting"] .agent-bubble,
+.agent-card[data-state="complete"] .agent-bubble {
+  border-color: #22c55e;
+  color: #22c55e;
+  box-shadow: 0 0 8px rgba(34,197,94,0.3);
+}
+
+/* alert / help / error */
+.agent-bubble.is-alert,
+.agent-card.state-alert .agent-bubble,
+.agent-card[data-state="help"] .agent-bubble,
+.agent-card[data-state="error"] .agent-bubble,
+.agent-card[data-state="alert"] .agent-bubble {
+  border-color: #ef4444;
+  color: #ef4444;
+  box-shadow: 0 0 8px rgba(239,68,68,0.3);
+}
+
+/* offline */
+.agent-bubble.is-offline,
+.agent-card.state-offline .agent-bubble,
+.agent-card[data-state="offline"] .agent-bubble {
+  border-color: #475569;
+  color: #475569;
   opacity: 0.8;
 }
 
@@ -465,25 +497,22 @@ html {
   border-top: 7px solid #94a3b8;
 }
 
-.agent-bubble.is-working::after {
-  border-top-color: #f97316;
-}
+.agent-bubble.is-working::after { border-top-color: #f97316; }
+.agent-bubble.is-waiting::after { border-top-color: #94a3b8; }
+.agent-bubble.is-complete::after { border-top-color: #22c55e; }
+.agent-bubble.is-alert::after { border-top-color: #ef4444; }
+.agent-bubble.is-offline::after { border-top-color: #475569; }
 
-.agent-bubble.is-waiting::after {
-  border-top-color: #94a3b8;
-}
-
-.agent-bubble.is-complete::after {
-  border-top-color: #22c55e;
-}
-
-.agent-bubble.is-alert::after {
-  border-top-color: #ef4444;
-}
-
-.agent-bubble.is-offline::after {
-  border-top-color: #475569;
-}
+.agent-card[data-state="working"] .agent-bubble::after { border-top-color: #f97316; }
+.agent-card[data-state="thinking"] .agent-bubble::after { border-top-color: #8b5cf6; }
+.agent-card[data-state="waiting"] .agent-bubble::after { border-top-color: #94a3b8; }
+.agent-card[data-state="idle"] .agent-bubble::after    { border-top-color: #94a3b8; }
+.agent-card[data-state="reporting"] .agent-bubble::after,
+.agent-card[data-state="complete"] .agent-bubble::after { border-top-color: #22c55e; }
+.agent-card[data-state="help"] .agent-bubble::after,
+.agent-card[data-state="error"] .agent-bubble::after,
+.agent-card[data-state="alert"] .agent-bubble::after { border-top-color: #ef4444; }
+.agent-card[data-state="offline"] .agent-bubble::after { border-top-color: #475569; }
 
 
 /* Character (full size) */
@@ -536,25 +565,6 @@ html {
    Per-State Color System
 ════════════════════════════════════════ */
 
-/* Idle (gray) */
-.agent-card[data-state="idle"] .agent-bubble {
-  border-color: #bdbdbd;
-}
-
-.agent-card[data-state="idle"] .agent-bubble::after {
-  border-top-color: #bdbdbd;
-}
-
-/* Thinking (violet, pulsing + dots animation) */
-.agent-card[data-state="thinking"] .agent-bubble {
-  border-color: #8b5cf6;
-  animation: bubble-pulse-violet 1s ease-in-out infinite;
-}
-
-.agent-card[data-state="thinking"] .agent-bubble::after {
-  border-top-color: #8b5cf6;
-}
-
 /* Thinking dots (blinking ... animation) */
 .agent-card[data-state="thinking"] .agent-bubble .thinking-dots span {
   animation: dot-blink 1.4s infinite;
@@ -586,33 +596,10 @@ html {
 
 /* Working (orange, faster pulse) */
 .agent-card[data-state="working"] .agent-bubble {
-  border-color: #f97316;
   animation: bubble-pulse-orange 0.6s ease-in-out infinite;
 }
 
-.agent-card[data-state="working"] .agent-bubble::after {
-  border-top-color: #f97316;
-}
-
-/* Reporting (green) */
-.agent-card[data-state="reporting"] .agent-bubble {
-  border-color: #22c55e;
-}
-
-.agent-card[data-state="reporting"] .agent-bubble::after {
-  border-top-color: #22c55e;
-}
-
 /* Offline (slate, dimmed character) */
-.agent-card[data-state="offline"] .agent-bubble {
-  border-color: #475569;
-  color: #94a3b8;
-}
-
-.agent-card[data-state="offline"] .agent-bubble::after {
-  border-top-color: #475569;
-}
-
 .agent-card[data-state="offline"] .agent-character {
   filter: grayscale(80%) opacity(0.5);
 }
