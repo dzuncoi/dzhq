@@ -154,6 +154,16 @@ function recalcStats() {
 
   if (DOM.rpTokens) DOM.rpTokens.textContent = formatNum(state.stats.totalTokens);
   if (DOM.rpCost) DOM.rpCost.textContent = `$${state.stats.totalCost.toFixed(2)}`;
+
+  // right panel: input/output token breakdown
+  const inputTok = arr.reduce((s, a) => s + (a.tokenUsage?.inputTokens || 0), 0);
+  const outputTok = arr.reduce((s, a) => s + (a.tokenUsage?.outputTokens || 0), 0);
+  if (DOM.rpInputTokens) DOM.rpInputTokens.textContent = formatNum(inputTok);
+  if (DOM.rpOutputTokens) DOM.rpOutputTokens.textContent = formatNum(outputTok);
+
+  // right panel: active model
+  const activeAgent = arr.find(a => ['working', 'thinking'].includes(a.status) && a.model);
+  if (DOM.rpModel && activeAgent) DOM.rpModel.textContent = activeAgent.model;
 }
 
 function updateConnectionStatus(up) {
@@ -695,8 +705,7 @@ function initApp() {
   let btn = document.querySelector(`[data-view="${state.currentView}"]`);
   if (!btn) btn = document.querySelector(`[data-view="office"]`);
   btn.classList.add('active');
-  bClickObj = btn;
-  const target = bClickObj.dataset.view;
+  const target = btn.dataset.view;
   document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
   const tgtEl = document.getElementById(`${target}View`);
   if (tgtEl) tgtEl.classList.add('active');

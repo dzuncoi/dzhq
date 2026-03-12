@@ -51,6 +51,7 @@
   --color-error-dim:    rgba(239,68,68,0.15);
   --color-info:         var(--state-thinking);
   --color-info-dim:     rgba(139,92,246,0.15);
+  --color-primary-dim:  rgba(0, 255, 255, 0.1);
   --color-warning:      #f97316;
   --color-warning-dim:  rgba(249,115,22,0.15);
 
