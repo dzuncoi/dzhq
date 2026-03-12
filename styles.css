@@ -185,17 +185,16 @@ html {
   right: 1px;
   width: 22px;
   height: 18px;
-  border: 2px solid #5a9bcf;
+  border: 1.5px solid #00ffff44;
   border-radius: 3px;
-  background: #1a1a2e;
-  color: #5aff5a;
+  background: #030c18;
+  color: #00ffff;
   font-family: var(--font-body);
   font-size: 0;
   line-height: 1;
-  text-align: left;
   cursor: pointer;
   opacity: 0.75;
-  transition: opacity 0.2s, border-color 0.15s, transform 0.1s, background 0.15s;
+  transition: opacity 0.2s, border-color 0.15s, transform 0.1s, box-shadow 0.15s;
   z-index: 10;
   -webkit-app-region: no-drag;
   pointer-events: auto;
@@ -203,7 +202,6 @@ html {
   overflow: hidden;
 }
 
-/* Terminal title bar */
 .focus-terminal-btn::before {
   content: '';
   position: absolute;
@@ -211,11 +209,10 @@ html {
   left: 0;
   right: 0;
   height: 4px;
-  background: #5a9bcf;
+  background: #00ffff1a;
   border-radius: 0;
 }
 
-/* >_ cursor */
 .focus-terminal-btn::after {
   content: '>_';
   position: absolute;
@@ -224,7 +221,7 @@ html {
   font-family: var(--font-body);
   font-size: 8px;
   font-weight: 700;
-  color: #5aff5a;
+  color: #00ffff;
   line-height: 1;
   animation: blink-cursor 1s step-end infinite;
 }
@@ -234,30 +231,24 @@ html {
   50% { opacity: 0; }
 }
 
-.agent-card:hover .focus-terminal-btn {
-  opacity: 1;
-}
+.agent-card:hover .focus-terminal-btn { opacity: 1; }
 
 .focus-terminal-btn:hover {
   opacity: 1 !important;
-  border-color: #7ec8e3;
-  background: #0d1b2a;
+  border-color: #00ffff;
+  box-shadow: 0 0 8px #00ffff44;
   transform: scale(1.15);
 }
 
-.focus-terminal-btn:active {
-  transform: scale(0.95);
-}
+.focus-terminal-btn:active { transform: scale(0.95); }
 
 .focus-terminal-btn.clicked {
-  border-color: #5aff5a;
-  background: #0a3d0a;
+  border-color: #00ffff;
+  background: #00ffff11;
   opacity: 1 !important;
 }
 
-.focus-terminal-btn .focus-icon {
-  display: none;
-}
+.focus-terminal-btn .focus-icon { display: none; }
 
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
@@ -725,10 +716,10 @@ html {
 }
 
 .web-dashboard-btn {
-  background: rgba(255, 255, 255, 0.92);
-  color: #333;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: 12px;
+  background: #060c14;
+  color: #8b9ec7;
+  border: 1px solid #00ffff22;
+  border-radius: 8px;
   padding: 3px 10px;
   font-family: var(--font-body);
   font-size: 10px;
@@ -736,31 +727,32 @@ html {
   cursor: pointer;
   transition: all 0.2s ease;
   pointer-events: auto;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  box-shadow: none;
   white-space: nowrap;
+  letter-spacing: 0.5px;
 }
 
 .web-dashboard-btn:hover {
-  background: #2196f3;
-  color: #fff;
-  border-color: #1976d2;
+  background: #00ffff11;
+  color: #00ffff;
+  border-color: #00ffff66;
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.4);
+  box-shadow: 0 0 10px #00ffff33;
 }
 
 .web-dashboard-btn:active {
   transform: translateY(0);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  box-shadow: none;
 }
 
 .web-dashboard-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.4;
   cursor: not-allowed;
   transform: none;
 }
 
 .web-dashboard-btn:focus-visible {
-  outline: 2px solid #2196f3;
+  outline: 2px solid #00ffff;
   outline-offset: 2px;
 }
 
