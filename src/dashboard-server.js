@@ -270,7 +270,7 @@ function handleRequest(req, res) {
       }
       res.writeHead(200, {
         'Content-Type': mime,
-        'Cache-Control': 'public, max-age=3600'
+        'Cache-Control': 'no-store'
       });
       res.end(data);
     });
@@ -509,21 +509,6 @@ function startServer() {
   return server;
 }
 
-// Graceful shutdown
-process.on('SIGINT', () => {
-  wsClients.forEach(client => {
-    try {
-      client.close();
-    } catch (e) {
-      // Ignore errors during shutdown
-    }
-  });
-  wsClients.clear();
-
-  server.close(() => {
-    process.exit(0);
-  });
-});
 
 // Export functions for use in main.js
 module.exports = {

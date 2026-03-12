@@ -721,4 +721,48 @@ function initApp() {
   }, 100);
 }
 
-document.addEventListener('DOMContentLoaded', initApp);
+// ─── RIGHT PANEL RESIZE ───
+function initPanelResize() {
+  const resizer = document.getElementById('panelResizer');
+  const panel = document.getElementById('rightPanel');
+  if (!resizer || !panel) return;
+
+  const STORAGE_KEY = 'mc-right-panel-width';
+  const MIN_WIDTH = 180;
+  const MAX_WIDTH = 480;
+
+  const saved = parseInt(localStorage.getItem(STORAGE_KEY), 10);
+  if (saved >= MIN_WIDTH && saved <= MAX_WIDTH) {
+    panel.style.width = saved + 'px';
+  }
+
+  let startX = 0;
+  let startWidth = 0;
+
+  function onMouseMove(e) {
+    const delta = startX - e.clientX;
+    const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + delta));
+    panel.style.width = newWidth + 'px';
+  }
+
+  function onMouseUp() {
+    resizer.classList.remove('dragging');
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+    localStorage.setItem(STORAGE_KEY, parseInt(panel.style.width, 10));
+  }
+
+  resizer.addEventListener('mousedown', function (e) {
+    e.preventDefault();
+    startX = e.clientX;
+    startWidth = panel.offsetWidth;
+    resizer.classList.add('dragging');
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  initApp();
+  initPanelResize();
+});
