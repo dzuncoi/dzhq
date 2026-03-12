@@ -9,8 +9,30 @@ const path = require('path');
 const { URL } = require('url');
 const { adaptAgentToDashboard } = require('./dashboardAdapter');
 
-const PORT = 3000;
+const DEFAULT_PORT = 3000;
 const HTML_FILE = path.join(__dirname, '..', 'dashboard.html');
+
+let actualPort = DEFAULT_PORT;
+
+/**
+ * Find a free TCP port starting from startPort
+ */
+function findFreePort(startPort) {
+  return new Promise((resolve, reject) => {
+    const probe = http.createServer();
+    probe.listen(startPort, '127.0.0.1', () => {
+      const port = probe.address().port;
+      probe.close(() => resolve(port));
+    });
+    probe.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        resolve(findFreePort(startPort + 1));
+      } else {
+        reject(err);
+      }
+    });
+  });
+}
 
 // MIME type mapping
 const MIME_TYPES = {
@@ -489,24 +511,30 @@ server.on('upgrade', (req, socket, head) => {
 });
 
 /**
- * Start the server
+ * Start the server on the first free port >= DEFAULT_PORT.
+ * Returns a Promise that resolves to the http.Server instance.
  */
-function startServer() {
-  server.listen(PORT, () => {
-    // Server started silently — debugLog handles startup logging
+async function startServer() {
+  const port = await findFreePort(DEFAULT_PORT);
+  actualPort = port;
+
+  await new Promise((resolve, reject) => {
+    server.listen(port, () => resolve());
+    server.once('error', reject);
   });
 
-  // Error handling
   server.on('error', (err) => {
-    if (err.code === 'EADDRINUSE') {
-      console.error(`[Dashboard Server] ❌ Port ${PORT} already in use!`);
-      console.error('[Dashboard Server] 💡 Another server is already running on this port.');
-    } else {
-      console.error('[Dashboard Server] ❌ Server error:', err);
-    }
+    console.error('[Dashboard Server] ❌ Server error:', err);
   });
 
   return server;
+}
+
+/**
+ * Return the port the server is actually listening on.
+ */
+function getPort() {
+  return actualPort;
 }
 
 
@@ -520,10 +548,13 @@ module.exports = {
   broadcastSSE,
   calculateStats,
   startServer,
-  PORT
+  getPort,
+  DEFAULT_PORT,
 };
 
 // If this file is run directly (not required), start the server
 if (require.main === module) {
-  startServer();
+  startServer().then(() => {
+    console.log(`[Dashboard Server] Listening on http://localhost:${getPort()}`);
+  });
 }

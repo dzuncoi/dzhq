@@ -167,7 +167,7 @@ app.whenReady().then(async () => {
     HOOK_SERVER_PORT,
     errorHandler,
   });
-  windowManager.startDashboardServer();
+  await windowManager.startDashboardServer();
   livenessIntervals = startLivenessChecker({ agentManager, debugLog });
 
   // 7. Recover existing active sessions

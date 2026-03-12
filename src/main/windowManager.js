@@ -12,6 +12,7 @@ function createWindowManager({ agentManager, sessionScanner, heatmapScanner, deb
   let pipWindow = null;
   let keepAliveInterval = null;
   let dashboardServer = null;
+  let dashboardPort = 3000;
 
   function resizeWindowForAgents(agentsOrCount) {
     if (!mainWindow || mainWindow.isDestroyed()) return;
@@ -145,7 +146,7 @@ function createWindowManager({ agentManager, sessionScanner, heatmapScanner, deb
       });
 
       // Load via HTTP server (instead of file://) — needed for serving office module static files
-      dashboardWindow.loadURL('http://localhost:3000/');
+      dashboardWindow.loadURL(`http://localhost:${dashboardPort}/`);
 
       dashboardWindow.webContents.setWindowOpenHandler(({ url }) => {
         shell.openExternal(url);
@@ -233,7 +234,7 @@ function createWindowManager({ agentManager, sessionScanner, heatmapScanner, deb
       debugLog('[PiP] Window shown');
     });
 
-    pipWindow.loadURL('http://localhost:3000/pip');
+    pipWindow.loadURL(`http://localhost:${dashboardPort}/pip`);
 
     pipWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
       debugLog(`[PiP] Failed to load: ${errorCode} - ${errorDescription}`);
@@ -273,7 +274,7 @@ function createWindowManager({ agentManager, sessionScanner, heatmapScanner, deb
     dashboardWindow = null;
   }
 
-  function startDashboardServer() {
+  async function startDashboardServer() {
     if (dashboardServer) {
       debugLog('[Dashboard] Server is already running.');
       return;
@@ -294,9 +295,10 @@ function createWindowManager({ agentManager, sessionScanner, heatmapScanner, deb
         serverModule.setHeatmapScanner(heatmapScanner);
       }
 
-      dashboardServer = serverModule.startServer();
+      dashboardServer = await serverModule.startServer();
+      dashboardPort = serverModule.getPort();
 
-      debugLog('[Dashboard] Server started (port 3000)');
+      debugLog(`[Dashboard] Server started (port ${dashboardPort})`);
     } catch (error) {
       debugLog(`[Dashboard] Failed to start: ${error.message}`);
     }
