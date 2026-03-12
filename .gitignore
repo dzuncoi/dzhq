@@ -63,3 +63,4 @@ latest*.yml
 
 # Removed subproject (prevent re-creation)
 pixel_office/
+.superpowers/

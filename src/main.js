@@ -3,7 +3,7 @@
  * Module initialization, event wiring, and app lifecycle management
  */
 
-const { app, BrowserWindow, ipcMain, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -85,12 +85,14 @@ let hookProcessor = null;
 let livenessIntervals = null;
 let agentListeners = null;
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await session.defaultSession.clearCache();
   debugLog('========== Pixel Agent Desk started ==========');
 
   // Minimal application menu (removes default File/Edit/Window/Help clutter)
   const isDev = process.argv.includes('--dev');
   const menuTemplate = [
+    ...(process.platform === 'darwin' ? [{ role: 'appMenu' }] : []),
     {
       label: 'View',
       submenu: [
@@ -255,6 +257,17 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (agentManager) agentManager.stop();
   if (process.platform !== 'darwin') app.quit();
+});
+
+// Clear liveness intervals immediately on Ctrl+C so no stray log lines appear
+// before before-quit finishes the rest of cleanup.
+process.on('SIGINT', () => {
+  if (livenessIntervals) {
+    clearInterval(livenessIntervals.zombieSweepId);
+    clearInterval(livenessIntervals.livenessCheckId);
+    livenessIntervals = null;
+  }
+  app.quit();
 });
 
 app.on('before-quit', () => {

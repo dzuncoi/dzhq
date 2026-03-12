@@ -19,7 +19,7 @@ Pixel Agent Desk is a standalone Electron app that listens to [Claude Code](http
 
 - **Pixel Avatars** — Each agent session gets a unique sprite character with state-driven animations
 - **Virtual Office** — 2D pixel art office where characters walk between desks
-- **Agent Desk Dashboard** — Web-based monitoring panel with real-time stats (http://localhost:3000)
+- **DzHQ Dashboard** — Cyberpunk-themed HUD with KPI strip, resizable side panel, and real-time stats (http://localhost:3000)
 - **Activity Heatmap** — GitHub-style contribution grid showing daily agent session frequency
 - **Token Analytics** — Per-session and aggregate token usage, cost estimates, model breakdowns
 - **Terminal Focus** — Click any avatar to bring its terminal window to the foreground

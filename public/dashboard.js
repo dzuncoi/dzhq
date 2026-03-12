@@ -9,14 +9,52 @@ const state = {
 const DOM = {
   statusIndicator: document.getElementById('statusIndicator'),
   connectionStatus: document.getElementById('connectionStatus'),
-  agentPanel: document.getElementById('agentPanel'),
-  standbyMessage: document.getElementById('standbyMessage'),
-  kpiActiveAgents: document.getElementById('kpiActiveAgents'),
+  footerStatusDot: document.getElementById('footerStatusDot'),
+  footerStatusText: document.getElementById('footerStatusText'),
+  hudClock: document.getElementById('hudClock'),
+
+  // KPI strip elements
+  kpiActiveAgents: document.getElementById('kpiTotalAgents'),   // legacy alias
   kpiTotalAgents: document.getElementById('kpiTotalAgents'),
+  kpiWorkingAgents: document.getElementById('kpiWorkingAgents'),
+  kpiThinkingAgents: document.getElementById('kpiThinkingAgents'),
   kpiTokens: document.getElementById('kpiTokens'),
   kpiCost: document.getElementById('kpiCost'),
-  kpiErrors: document.getElementById('kpiErrors')
+  kpiSession: document.getElementById('kpiSession'),
+  kpiErrors: { textContent: '' },  // removed from UI, kept as noop to avoid JS errors
+
+  // Agent panel (migrated from agent-roster-panel in officeView)
+  agentPanel: document.getElementById('agentPanel'),
+  standbyMessage: document.getElementById('standbyMessage'),
+
+  // Right panel mirrors
+  rpTokens: document.getElementById('rpTokens'),
+  rpInputTokens: document.getElementById('rpInputTokens'),
+  rpOutputTokens: document.getElementById('rpOutputTokens'),
+  rpCost: document.getElementById('rpCost'),
+  rpModel: document.getElementById('rpModel'),
 };
+
+// Live clock in HUD top bar
+function updateClock() {
+  if (DOM.hudClock) {
+    const now = new Date();
+    DOM.hudClock.textContent = now.toLocaleTimeString('en-GB', { hour12: false });
+  }
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// Session timer — updates kpiSession every second
+let sessionStart = Date.now();
+function updateSessionTimer() {
+  const elapsed = Math.floor((Date.now() - sessionStart) / 60000);
+  if (DOM.kpiSession) DOM.kpiSession.textContent = elapsed < 60
+    ? `${elapsed}m`
+    : `${Math.floor(elapsed/60)}h${elapsed%60}m`;
+}
+setInterval(updateSessionTimer, 1000);
+updateSessionTimer();
 
 // ─── SSE CONNECTION ───
 let sseDelay = 1000;
@@ -101,15 +139,31 @@ const formatNum = n => {
 function recalcStats() {
   const arr = Array.from(state.agents.values());
   state.stats.total = arr.length;
-  state.stats.active = arr.filter(a => ['working', 'thinking'].includes(a.status)).length;
+  state.stats.working = arr.filter(a => a.status === 'working').length;
+  state.stats.thinking = arr.filter(a => a.status === 'thinking').length;
+  state.stats.active = state.stats.working + state.stats.thinking;
   state.stats.totalTokens = arr.reduce((s, a) => s + ((a.tokenUsage?.inputTokens || 0) + (a.tokenUsage?.outputTokens || 0)), 0);
   state.stats.totalCost = arr.reduce((s, a) => s + (a.tokenUsage?.estimatedCost || 0), 0);
 
-  DOM.kpiActiveAgents.innerHTML = `${state.stats.active} <span style="font-size:0.8rem;color:var(--color-text-dark)">/ ${state.stats.total}</span>`;
-  DOM.kpiTokens.textContent = formatNum(state.stats.totalTokens);
-  DOM.kpiCost.textContent = `$${state.stats.totalCost.toFixed(2)}`;
+  if (DOM.kpiTotalAgents) DOM.kpiTotalAgents.textContent = state.stats.total.toString();
+  if (DOM.kpiWorkingAgents) DOM.kpiWorkingAgents.textContent = state.stats.working.toString();
+  if (DOM.kpiThinkingAgents) DOM.kpiThinkingAgents.textContent = state.stats.thinking.toString();
+  if (DOM.kpiTokens) DOM.kpiTokens.textContent = formatNum(state.stats.totalTokens);
+  if (DOM.kpiCost) DOM.kpiCost.textContent = `$${state.stats.totalCost.toFixed(2)}`;
   DOM.kpiErrors.textContent = state.stats.errorCount.toString();
-  if (state.stats.errorCount > 0) DOM.kpiErrors.className = 'kpi-value error';
+
+  if (DOM.rpTokens) DOM.rpTokens.textContent = formatNum(state.stats.totalTokens);
+  if (DOM.rpCost) DOM.rpCost.textContent = `$${state.stats.totalCost.toFixed(2)}`;
+
+  // right panel: input/output token breakdown
+  const inputTok = arr.reduce((s, a) => s + (a.tokenUsage?.inputTokens || 0), 0);
+  const outputTok = arr.reduce((s, a) => s + (a.tokenUsage?.outputTokens || 0), 0);
+  if (DOM.rpInputTokens) DOM.rpInputTokens.textContent = formatNum(inputTok);
+  if (DOM.rpOutputTokens) DOM.rpOutputTokens.textContent = formatNum(outputTok);
+
+  // right panel: active model
+  const activeAgent = arr.find(a => ['working', 'thinking'].includes(a.status) && a.model);
+  if (DOM.rpModel && activeAgent) DOM.rpModel.textContent = activeAgent.model;
 }
 
 function updateConnectionStatus(up) {
@@ -118,10 +172,14 @@ function updateConnectionStatus(up) {
     DOM.statusIndicator.className = 'status-dot connected';
     DOM.connectionStatus.textContent = 'Gateway Online';
     if (b) b.style.display = 'none';
+    if (DOM.footerStatusDot) DOM.footerStatusDot.className = 'status-dot footer-dot connected';
+    if (DOM.footerStatusText) DOM.footerStatusText.textContent = 'Gateway Online';
   } else {
     DOM.statusIndicator.className = 'status-dot disconnected';
     DOM.connectionStatus.textContent = 'Disconnected';
     if (b) b.style.display = 'block';
+    if (DOM.footerStatusDot) DOM.footerStatusDot.className = 'status-dot footer-dot disconnected';
+    if (DOM.footerStatusText) DOM.footerStatusText.textContent = 'Disconnected';
   }
 }
 
@@ -647,8 +705,7 @@ function initApp() {
   let btn = document.querySelector(`[data-view="${state.currentView}"]`);
   if (!btn) btn = document.querySelector(`[data-view="office"]`);
   btn.classList.add('active');
-  bClickObj = btn;
-  const target = bClickObj.dataset.view;
+  const target = btn.dataset.view;
   document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
   const tgtEl = document.getElementById(`${target}View`);
   if (tgtEl) tgtEl.classList.add('active');
@@ -664,4 +721,48 @@ function initApp() {
   }, 100);
 }
 
-document.addEventListener('DOMContentLoaded', initApp);
+// ─── RIGHT PANEL RESIZE ───
+function initPanelResize() {
+  const resizer = document.getElementById('panelResizer');
+  const panel = document.getElementById('rightPanel');
+  if (!resizer || !panel) return;
+
+  const STORAGE_KEY = 'mc-right-panel-width';
+  const MIN_WIDTH = 180;
+  const MAX_WIDTH = 480;
+
+  const saved = parseInt(localStorage.getItem(STORAGE_KEY), 10);
+  if (saved >= MIN_WIDTH && saved <= MAX_WIDTH) {
+    panel.style.width = saved + 'px';
+  }
+
+  let startX = 0;
+  let startWidth = 0;
+
+  function onMouseMove(e) {
+    const delta = startX - e.clientX;
+    const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + delta));
+    panel.style.width = newWidth + 'px';
+  }
+
+  function onMouseUp() {
+    resizer.classList.remove('dragging');
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+    localStorage.setItem(STORAGE_KEY, parseInt(panel.style.width, 10));
+  }
+
+  resizer.addEventListener('mousedown', function (e) {
+    e.preventDefault();
+    startX = e.clientX;
+    startWidth = panel.offsetWidth;
+    resizer.classList.add('dragging');
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  initApp();
+  initPanelResize();
+});
