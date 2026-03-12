@@ -273,14 +273,12 @@ html {
 .type-tag {
   display: inline-block;
   font-family: var(--font-body);
-  font-size: 10px;
+  font-size: 8px;
   font-weight: 700;
   text-transform: uppercase;
   padding: 1px 5px;
-  border-radius: 3px;
-  letter-spacing: 0.03em;
-  color: #fff;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+  border-radius: 2px;
+  letter-spacing: 0.5px;
   margin-bottom: 2px;
   -webkit-app-region: drag;
   pointer-events: auto;
@@ -288,46 +286,51 @@ html {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/* State-based type-tag colors (matches agent state, not type) */
-.type-tag {
-  background: #94a3b8;
-  border: 1px solid #64748b;
-  transition: background 0.3s ease, border-color 0.3s ease;
+  /* Default: waiting state */
+  background: rgba(148,163,184,0.13);
+  border: 1px solid rgba(148,163,184,0.27);
+  color: #94a3b8;
+  transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
 .agent-card[data-state="working"] .type-tag {
-  background: #f97316;
-  border-color: #ea580c;
+  background: rgba(249,115,22,0.13);
+  border-color: rgba(249,115,22,0.27);
+  color: #f97316;
 }
 
 .agent-card[data-state="thinking"] .type-tag {
-  background: #8b5cf6;
-  border-color: #7c3aed;
+  background: rgba(139,92,246,0.13);
+  border-color: rgba(139,92,246,0.27);
+  color: #8b5cf6;
 }
 
-.agent-card[data-state="waiting"] .type-tag {
-  background: #94a3b8;
-  border-color: #64748b;
+.agent-card[data-state="waiting"] .type-tag,
+.agent-card[data-state="idle"] .type-tag {
+  background: rgba(148,163,184,0.13);
+  border-color: rgba(148,163,184,0.27);
+  color: #94a3b8;
 }
 
 .agent-card[data-state="reporting"] .type-tag,
 .agent-card[data-state="complete"] .type-tag {
-  background: #22c55e;
-  border-color: #16a34a;
+  background: rgba(34,197,94,0.13);
+  border-color: rgba(34,197,94,0.27);
+  color: #22c55e;
 }
 
 .agent-card[data-state="help"] .type-tag,
 .agent-card[data-state="error"] .type-tag,
 .agent-card[data-state="alert"] .type-tag {
-  background: #ef4444;
-  border-color: #dc2626;
+  background: rgba(239,68,68,0.13);
+  border-color: rgba(239,68,68,0.27);
+  color: #ef4444;
 }
 
 .agent-card[data-state="offline"] .type-tag {
-  background: #475569;
-  border-color: #334155;
+  background: rgba(71,85,105,0.13);
+  border-color: rgba(71,85,105,0.27);
+  color: #475569;
 }
 
 /* Per-type card highlight (removed - prevents border artifacts) */
@@ -541,16 +544,14 @@ html {
 /* Name badge (below character) */
 .agent-name {
   font-family: var(--font-body);
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 700;
-  color: #fff;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-  background: rgba(0, 0, 0, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  padding: 3px 9px;
+  color: #e0f0ff;
+  background: rgba(3,4,8,0.9);
+  border: 1px solid #00ffff1a;
+  border-radius: 6px;
+  padding: 2px 8px;
   margin-top: -6px;
-  /* Slightly overlap with character line */
   max-width: 72px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -558,7 +559,6 @@ html {
   text-align: center;
   z-index: 10;
   pointer-events: none;
-  /* Exclude from click target so parent (character) receives clicks */
 }
 
 /* ════════════════════════════════════════
